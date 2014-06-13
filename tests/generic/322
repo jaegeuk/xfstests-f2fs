@@ -100,6 +100,6 @@ _init_flakey
 _rename_test
 _clean_working_dir
 _write_after_fsync_rename_test
-
+_mount_flakey
 status=0
 exit

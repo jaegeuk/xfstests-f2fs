@@ -127,6 +127,7 @@ _clean_working_dir
 _rename_test
 _clean_working_dir
 _replay_rename_test
+_mount_flakey
 
 status=0
 exit
