@@ -125,7 +125,7 @@ function check_sums() {
 
 function run_process() {
 	local p=$1
-	repeat=10
+	repeat=3
 
 	sleep $((5*$p))s &
 	export chpid=$! && wait $chpid &> /dev/null
