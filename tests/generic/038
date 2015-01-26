@@ -115,7 +115,7 @@ trim_loop()
 #
 # Creating 200,000 files sequentially is really slow, so speed it up a bit
 # by doing it concurrently with 4 threads in 4 separate directories.
-nr_files=$((50000 * LOAD_FACTOR))
+nr_files=$((25000 * LOAD_FACTOR))
 create_files()
 {
 	local prefix=$1
@@ -143,7 +143,7 @@ create_files()
 
 _scratch_mkfs >>$seqres.full 2>&1
 _scratch_mount
-_require_fs_space $SCRATCH_MNT $((10 * 1024 * 1024))
+_require_fs_space $SCRATCH_MNT $((5 * 1024 * 1024))
 _require_batched_discard $SCRATCH_MNT
 
 for ((i = 0; i < $((4 * $LOAD_FACTOR)); i++)); do
