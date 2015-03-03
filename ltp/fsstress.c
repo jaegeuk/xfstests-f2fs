@@ -49,6 +49,15 @@
 
 #define FILELEN_MAX		(32*4096)
 
+#include <ftw.h>
+
+#ifdef XFS_XFLAG_EXTSIZE
+#undef XFS_XFLAG_EXTSIZE
+#endif
+#ifdef XFS_DIO_INFO
+#undef XFS_DIO_INFO
+#endif
+
 typedef enum {
 	OP_ALLOCSP,
 	OP_ATTR_REMOVE,
@@ -1911,13 +1920,13 @@ chown_f(int opno, long r)
 	check_cwd();
 	if (v)
 		printf("%d/%d: chown %s %d/%d %d\n", procid, opno, f.path, (int)u, (int)g, e);
+
 	free_pathname(&f);
 }
 
 void
-setxattr_f(int opno, long r)
+setxattr_xfs(int opno, long r)
 {
-#ifdef XFS_XFLAG_EXTSIZE
 	struct fsxattr	fsx;
 	int		fd;
 	int		e;
@@ -1947,6 +1956,38 @@ setxattr_f(int opno, long r)
 		printf("%d/%d: setxattr %s %u %d\n", procid, opno, f.path, p, e);
 	free_pathname(&f);
 	close(fd);
+}
+
+void
+setxattr_fs(int opno, long r)
+{
+	unsigned char name[20];
+	unsigned char value[20];
+	int		e;
+	pathname_t	f;
+	int		v;
+
+	init_pathname(&f);
+	if (!get_fname(FT_REGm, r, &f, NULL, NULL, &v))
+		append_pathname(&f, ".");
+
+	sprintf(name, "user.val%d\0", random() % 100000);
+	sprintf(value, "%d\0", random() % 100000);
+	e = setxattr(f.path, name, value, strlen(value), 0);
+
+	if (v)
+		printf("%d/%d: setxattr %s %d\n", procid, opno, f.path, e);
+
+	free_pathname(&f);
+}
+
+void
+setxattr_f(int opno, long r)
+{
+#ifdef XFS_XFLAG_EXTSIZE
+	setxattr_xfs(opno, r);
+#else
+	setxattr_fs(opno, r);
 #endif
 }
 
@@ -2026,9 +2067,14 @@ creat_f(int opno, long r)
 void
 dread_f(int opno, long r)
 {
-	__int64_t	align;
+	__int64_t	align = 4096;
+	__int64_t	mem = 4096;
+	__int64_t	maxiosz = 0xffffff - 4096;
 	char		*buf;
+#if XFS_DIO_INFO
 	struct dioattr	diob;
+	char		*dio_env;
+#endif
 	int		e;
 	pathname_t	f;
 	int		fd;
@@ -2038,7 +2084,6 @@ dread_f(int opno, long r)
 	struct stat64	stb;
 	int		v;
 	char		st[1024];
-	char		*dio_env;
 
 	init_pathname(&f);
 	if (!get_fname(FT_REGFILE, r, &f, NULL, NULL, &v)) {
@@ -2074,6 +2119,7 @@ dread_f(int opno, long r)
 		close(fd);
 		return;
 	}
+#if XFS_DIO_INFO
 	if (xfsctl(f.path, fd, XFS_IOC_DIOINFO, &diob) < 0) {
 		if (v)
 			printf(
@@ -2089,6 +2135,8 @@ dread_f(int opno, long r)
 		diob.d_mem = diob.d_miniosz = atoi(dio_env);
 
 	align = (__int64_t)diob.d_miniosz;
+	maxiosz = diob.d_maxiosz;
+#endif
 	lr = ((__int64_t)random() << 32) + random();
 	off = (off64_t)(lr % stb.st_size);
 	off -= (off % align);
@@ -2097,9 +2145,9 @@ dread_f(int opno, long r)
 	len -= (len % align);
 	if (len <= 0)
 		len = align;
-	else if (len > diob.d_maxiosz) 
-		len = diob.d_maxiosz;
-	buf = memalign(diob.d_mem, len);
+	else if (len > maxiosz)
+		len = maxiosz;
+	buf = memalign(mem, len);
 	e = read(fd, buf, len) < 0 ? errno : 0;
 	free(buf);
 	if (v)
@@ -2112,9 +2160,14 @@ dread_f(int opno, long r)
 void
 dwrite_f(int opno, long r)
 {
-	__int64_t	align;
+	__int64_t	align = 4096;
+	__int64_t	mem = 4096;
+	__int64_t	maxiosz = 0xffffff - 4096;
 	char		*buf;
+#if XFS_DIO_INFO
 	struct dioattr	diob;
+	char		*dio_env;
+#endif
 	int		e;
 	pathname_t	f;
 	int		fd;
@@ -2124,7 +2177,6 @@ dwrite_f(int opno, long r)
 	struct stat64	stb;
 	int		v;
 	char		st[1024];
-	char		*dio_env;
 
 	init_pathname(&f);
 	if (!get_fname(FT_REGFILE, r, &f, NULL, NULL, &v)) {
@@ -2152,6 +2204,8 @@ dwrite_f(int opno, long r)
 		return;
 	}
 	inode_info(st, sizeof(st), &stb, v);
+
+#if XFS_DIO_INFO
 	if (xfsctl(f.path, fd, XFS_IOC_DIOINFO, &diob) < 0) {
 		if (v)
 			printf("%d/%d: dwrite - xfsctl(XFS_IOC_DIOINFO)"
@@ -2167,6 +2221,9 @@ dwrite_f(int opno, long r)
 		diob.d_mem = diob.d_miniosz = atoi(dio_env);
 
 	align = (__int64_t)diob.d_miniosz;
+	maxiosz = diob.d_maxiosz;
+	mem = diob.d_mem;
+#endif
 	lr = ((__int64_t)random() << 32) + random();
 	off = (off64_t)(lr % MIN(stb.st_size + (1024 * 1024), MAXFSIZE));
 	off -= (off % align);
@@ -2175,9 +2232,9 @@ dwrite_f(int opno, long r)
 	len -= (len % align);
 	if (len <= 0)
 		len = align;
-	else if (len > diob.d_maxiosz) 
-		len = diob.d_maxiosz;
-	buf = memalign(diob.d_mem, len);
+	else if (len > maxiosz)
+		len = maxiosz;
+	buf = memalign(mem, len);
 	off %= maxfsize;
 	lseek64(fd, off, SEEK_SET);
 	memset(buf, nameseq & 0xff, len);
@@ -2375,7 +2432,7 @@ fiemap_f(int opno, long r)
 	lr = ((__int64_t)random() << 32) + random();
 	off = (off64_t)(lr % MIN(stb.st_size + (1024 * 1024), MAXFSIZE));
 	off %= maxfsize;
-	fiemap->fm_flags = random() & (FIEMAP_FLAGS_COMPAT | 0x10000);
+	fiemap->fm_flags = random() & FIEMAP_FLAG_SYNC;
 	fiemap->fm_extent_count = blocks_to_map;
 	fiemap->fm_mapped_extents = random() & 0xffff;
 	fiemap->fm_start = off;
@@ -2387,6 +2444,10 @@ fiemap_f(int opno, long r)
 		       procid, opno, f.path, st, (long long)fiemap->fm_start,
 		       (long long) fiemap->fm_length,
 		       translate_fiemap_flags(fiemap->fm_flags), e);
+	if (fd >= 0 && e) {
+		printf("%d %x\n", errno, fiemap->fm_flags);
+		exit(-1);
+	}
 	free(fiemap);
 	free_pathname(&f);
 	close(fd);
@@ -2488,15 +2549,19 @@ getattr_f(int opno, long r)
 	int		v;
 
 	init_pathname(&f);
-	if (!get_fname(FT_ANYm, r, &f, NULL, NULL, &v))
+	if (!get_fname(FT_ANYm & ~(FT_DEVm | FT_SYMm), r, &f, NULL, NULL, &v))
 		append_pathname(&f, ".");
-	fd = open_path(&f, O_RDWR);
+	fd = open_path(&f, O_RDONLY);
 	e = fd < 0 ? errno : 0;
 	check_cwd();
 
 	e = ioctl(fd, FS_IOC_GETFLAGS, &fl);
 	if (v)
 		printf("%d/%d: getattr %s %u %d\n", procid, opno, f.path, fl, e);
+	if (e) {
+		printf("%d %d\n", fd, errno);
+		exit(1);
+	}
 	free_pathname(&f);
 	close(fd);
 }
