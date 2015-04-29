@@ -1,0 +1,27 @@
+:
+# To use this script to run Suite9 then Suite7  
+# back-to-back do the following:
+#	uncipher Suite9 .hll file
+#	untar the resulting Suite9 tar file
+#	cd <suite9 directory>
+#	S9setup doapr
+#	make
+#	test singleuser w/ 2 second test period
+#	cd ..
+#	uncipher Suite7 .hll file
+#	untar the resulting Suite7 tar file
+#	cd <suite7 directory>
+#	S7setup doapr
+#	df and vi config if necessary
+#	make
+#	test multitask from 2 loads to  2 loads
+#	cp <name of this script> ..
+#	cd ..
+#	nohup <name of this script> &
+#
+# @(#) AIMstart.s7:1.4 1/22/96 00:00:00
+#
+cd s9100
+RUN
+cd ../s7100
+RUN
