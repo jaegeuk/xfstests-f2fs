@@ -1,0 +1,25 @@
+export FSTYP=f2fs
+export TEST_DEV=/dev/vdb
+export TEST_DIR=/mnt/test
+export SCRATCH_DEV=/dev/vdc
+export SCRATCH_MNT=/mnt/scratch
+export RECREATE_TEST_DEV=true
+export TEST_LOGDEV=/dev/vdd
+export SCRATCH_LOGDEV=/dev/vde
+export LOGWRITES_DEV=/dev/vdf
+
+_uname()
+{
+	kernel=`uname -r`
+	echo ${kernel%.*}
+}
+
+_notrun_f2fs()
+{
+	kernel=`uname -r`
+	version=`echo ${kernel%.*}`
+
+	if [ "$version" == "$1" ]; then
+		_notrun "$1 - $2"
+	fi
+}

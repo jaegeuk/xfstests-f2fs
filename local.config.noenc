@@ -1,0 +1,6 @@
+# local.config
+
+. local.config.f2fs
+
+export F2FS_MKFS_OPTIONS="-f"
+export F2FS_MOUNT_OPTIONS="-o discard,fsync_mode=strict" #inline_data is set by default
