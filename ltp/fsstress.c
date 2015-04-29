@@ -157,6 +157,7 @@ typedef enum {
 	OP_WRITE_DONTCACHE,
 	OP_WRITEV,
 	OP_EXCHANGE_RANGE,
+	OP_DROP,
 	OP_LAST
 } opty_t;
 
@@ -290,7 +291,7 @@ void	write_dontcache_f(opnum_t, long);
 void	write_f(opnum_t, long);
 void	writev_f(opnum_t, long);
 void	exchangerange_f(opnum_t, long);
-
+void	drop_f(opnum_t, long);
 char	*xattr_flag_to_string(int);
 
 struct opdesc	ops[OP_LAST]	= {
@@ -363,6 +364,7 @@ struct opdesc	ops[OP_LAST]	= {
 	[OP_WRITEV]	   = {"writev",	       writev_f,	4, 1 },
 	[OP_WRITE_DONTCACHE]= {"write_dontcache", write_dontcache_f,4, 1 },
 	[OP_EXCHANGE_RANGE]= {"exchangerange", exchangerange_f,	2, 1 },
+	[OP_DROP]	   = {"drop",	       drop_f,          0, 0 },
 }, *ops_end;
 
 flist_t	flist[FT_nft] = {
@@ -5675,6 +5677,11 @@ write_dontcache_f(opnum_t opno, long r)
 		       (int)iov.iov_len, e);
 	free_pathname(&f);
 	close(fd);
+}
+
+drop_f(opnum_t opno, long r)
+{
+	system("echo 3 > /proc/sys/vm/drop_caches");
 }
 
 char *
