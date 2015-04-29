@@ -144,6 +144,7 @@ typedef enum {
 	OP_WRITE,
 	OP_WRITEV,
 	OP_XCHGRANGE,
+	OP_DROP,
 	OP_LAST
 } opty_t;
 
@@ -274,7 +275,7 @@ void	uring_write_f(opnum_t, long);
 void	write_f(opnum_t, long);
 void	writev_f(opnum_t, long);
 void	xchgrange_f(opnum_t, long);
-
+void	drop_f(opnum_t, long);
 char	*xattr_flag_to_string(int);
 
 struct opdesc	ops[OP_LAST]	= {
@@ -344,6 +345,7 @@ struct opdesc	ops[OP_LAST]	= {
 	[OP_WRITE]	   = {"write",	       write_f,		4, 1 },
 	[OP_WRITEV]	   = {"writev",	       writev_f,	4, 1 },
 	[OP_XCHGRANGE]	   = {"xchgrange",     xchgrange_f,	2, 1 },
+	[OP_DROP]	   = {"drop",	       drop_f,          0, 0 },
 }, *ops_end;
 
 flist_t	flist[FT_nft] = {
@@ -5485,6 +5487,12 @@ writev_f(opnum_t opno, long r)
 		       iovcnt, e);
 	free_pathname(&f);
 	close(fd);
+}
+
+void
+drop_f(opnum_t opno, long r)
+{
+	system("echo 3 > /proc/sys/vm/drop_caches");
 }
 
 char *
