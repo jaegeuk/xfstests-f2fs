@@ -1,0 +1,10 @@
+# local.config
+
+export FSTYP=f2fs
+export TEST_DEV=/dev/sdb1
+export TEST_DIR=/mnt/test
+export SCRATCH_DEV=/dev/sdb2
+export SCRATCH_MNT=/mnt/scratch
+export RECREATE_TEST_DEV=true
+#export F2FS_MKFS_OPTIONS="-O encrypt"
+export F2FS_MOUNT_OPTIONS="-o inline_xattr,discard" #inline_data is set by default
