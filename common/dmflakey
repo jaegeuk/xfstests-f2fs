@@ -41,6 +41,8 @@ _mount_flakey()
 {
 	_scratch_options mount
 	mount -t $FSTYP $SCRATCH_OPTIONS $MOUNT_OPTIONS $FLAKEY_DEV $SCRATCH_MNT
+	_add_key $SCRATCH_MNT
+	return 0
 }
 
 _unmount_flakey()

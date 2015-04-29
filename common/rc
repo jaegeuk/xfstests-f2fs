@@ -340,6 +340,14 @@ _overlay_scratch_unmount()
 	$UMOUNT_PROG $SCRATCH_MNT
 }
 
+_add_key()
+{
+    crypt=`echo $MKFS_OPTIONS | grep encrypt`
+    if [ "$crypt" ]; then
+        echo foo | e4crypt add_key -S 0x12 $1 >/dev/null 2>/dev/null
+    fi
+}
+
 _scratch_mount()
 {
     if [ "$FSTYP" == "overlay" ]; then
@@ -347,6 +355,8 @@ _scratch_mount()
         return $?
     fi
     _mount -t $FSTYP `_scratch_mount_options $*`
+    _add_key $SCRATCH_MNT
+    return 0
 }
 
 _scratch_unmount()
@@ -396,6 +406,8 @@ _test_mount()
     fi
     _test_options mount
     _mount -t $FSTYP $TEST_OPTIONS $TEST_FS_MOUNT_OPTS $SELINUX_MOUNT_OPTIONS $* $TEST_DEV $TEST_DIR
+    _add_key $TEST_DIR
+    return 0
 }
 
 _test_unmount()
@@ -2137,6 +2149,7 @@ _mount_or_remount_rw()
 		_remount $device rw
 	fi
 
+	_add_key $mountpoint
 	return 1 # ok=1
 }
 
