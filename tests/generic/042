@@ -47,6 +47,8 @@ _cleanup()
 . ./common/filter
 . ./common/punch
 
+_notrun "small partition for f2fs"
+
 # real QA test starts here
 rm -f $seqres.full
 
