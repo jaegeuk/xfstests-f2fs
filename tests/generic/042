@@ -19,6 +19,7 @@ _begin_fstest shutdown rw punch zero prealloc auto quick
 . ./common/filter
 . ./common/punch
 
+_notrun "small partition for f2fs"
 
 _crashtest()
 {
