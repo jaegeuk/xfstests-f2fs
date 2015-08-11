@@ -47,7 +47,7 @@ _require_scratch
 
 rm -f $seqres.full
 
-dev_size=$((512 * 1024 * 1024))     # 512MB filesystem
+dev_size=$((548 * 1024 * 1024))     # 512MB filesystem
 _scratch_mkfs_sized $dev_size >>$seqres.full 2>&1
 _scratch_mount
 
@@ -58,6 +58,7 @@ for ((i = 0; i < 10; i++)); do
 _filter_xfs_io | _filter_scratch
 
 	rm -f "$SCRATCH_MNT"/file
+	echo 3 > /proc/sys/vm/drop_caches
 done
 
 status=0
