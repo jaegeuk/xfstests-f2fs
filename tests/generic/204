@@ -45,6 +45,8 @@ _supported_os Linux
 
 _require_scratch
 
+_notrun "doesn't match f2fs on-disk spec"
+
 rm -f $seqres.full
 
 # get the block size first
