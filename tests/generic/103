@@ -58,10 +58,22 @@ _consume_freesp()
 {
 	file=$1
 
+	avail=`_get_available_space $SCRATCH_MNT`
+	filesizekb=$((avail / 1024))
+	node=$((filesizekb / 768))
+	filesizekb=$((filesizekb - node - 512))
+	echo $avail,$filesizekb,$node >> /tmp/test
+	$XFS_IO_PROG -fc "falloc 0 ${filesizekb}k" $file
+	off=$((filesizekb * 1024))
+
 	# consume nearly all available space (leave ~512kB)
 	avail=`_get_available_space $SCRATCH_MNT`
-	filesizekb=$((avail / 1024 - 512))
-	$XFS_IO_PROG -fc "falloc 0 ${filesizekb}k" $file
+	while [ $avail -gt $((512 * 1024)) ]; do
+		avail=`_get_available_space $SCRATCH_MNT`
+		echo $avail,$off >> /tmp/test
+		$XFS_IO_PROG -fc "falloc $off 4k" $file
+		off=$((off + 4096))
+	done
 }
 
 _scratch_mkfs >> $seqres.full 2>&1
