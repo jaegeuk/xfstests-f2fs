@@ -2890,13 +2890,7 @@ _scale_fsstress_args()
 #
 _min_dio_alignment()
 {
-    dev=$1
-
-    if [ -b "$dev" ]; then
-        blockdev --getss $dev
-    else
-        $here/src/feature -s
-    fi
+    $here/src/feature -s
 }
 
 run_check()
