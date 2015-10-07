@@ -34,6 +34,7 @@ main(int argc, char *argv[])
 	int c;
 	int flag;
 	int flushlog_opt = 0;
+	int metaflush_opt = 0;
 	int verbose_opt = 0;
 	struct stat st;
 	char *mnt_dir;
@@ -41,10 +42,13 @@ main(int argc, char *argv[])
 
       	xprogname = argv[0];
 
-	while ((c = getopt(argc, argv, "fv")) != -1) {
+	while ((c = getopt(argc, argv, "fnv")) != -1) {
 		switch (c) {
 		case 'f':
 			flushlog_opt = 1;
+			break;
+		case 'n':
+			metaflush_opt = 1;
 			break;
 		case 'v':
 			verbose_opt = 1;
@@ -97,6 +101,8 @@ main(int argc, char *argv[])
 
 	flag = (flushlog_opt ? XFS_FSOP_GOING_FLAGS_LOGFLUSH 
 			    : XFS_FSOP_GOING_FLAGS_NOLOGFLUSH);
+	if (metaflush_opt)
+		flag = 0x3;
 
 	if (verbose_opt) {
 		printf("Opening \"%s\"\n", mnt_dir);
