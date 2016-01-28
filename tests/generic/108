@@ -63,9 +63,12 @@ vgname=vg_$seq
 rm -f $seqres.full
 
 # _get_scsi_debug_dev returns a scsi debug device with 128M in size by default
-SCSI_DEBUG_DEV=`_get_scsi_debug_dev`
-if [ "$SCSI_DEBUG_DEV" == "" ]; then
-	_fail "Failed to initialize scsi debug device"
+devsize=`blockdev --getsize64 $SCRATCH_DEV`
+
+SCSI_DEBUG_DEV=`_get_scsi_debug_dev 0 512 0 $((devsize/1024/1024))`
+LOADED=`lsmod | grep -wq scsi_debug`
+if [ "$LOADED" == "" ]; then
+	_notrun "Failed to initialize scsi debug device"
 fi
 echo "SCSI debug device $SCSI_DEBUG_DEV" >>$seqres.full
 
