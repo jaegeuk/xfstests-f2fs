@@ -95,8 +95,8 @@ $GETFATTR_PROG --absolute-names --dump $SCRATCH_MNT/foobar | _filter_scratch
 # file. This is to verify that after log replay our first xattr does not exist
 # anymore.
 echo "hello world!" >> $SCRATCH_MNT/foobar
-$XFS_IO_PROG -c "fsync" $SCRATCH_MNT/foobar
 $SETFATTR_PROG -x user.attr1 $SCRATCH_MNT/foobar
+$XFS_IO_PROG -c "fsync" $SCRATCH_MNT/foobar
 ln $SCRATCH_MNT/foobar $SCRATCH_MNT/foobar_link
 touch $SCRATCH_MNT/qwerty
 $XFS_IO_PROG -c "fsync" $SCRATCH_MNT/qwerty
