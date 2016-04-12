@@ -28,9 +28,19 @@ _acl_get_max()
 	f2fs)
 		_fs_options $TEST_DEV | grep "inline_xattr" >/dev/null 2>&1
 		if [ $? -eq 0 ]; then
-			echo 531
+			max=532
 		else
-			echo 506
+			max=507
+		fi
+		if [ -f /sys/fs/f2fs/$TEST_DEV/features/encryption ]; then
+			fscrypt status $TEST_DIR
+			if [ $? -ne 0 ]; then
+				echo $(($max-5))
+			else
+				echo $max
+			fi
+		else
+			echo $max
 		fi
 		;;
 	*)
