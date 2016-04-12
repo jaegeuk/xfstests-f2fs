@@ -45,9 +45,21 @@ _acl_get_max()
 	f2fs)
 		_fs_options $TEST_DEV | grep "inline_xattr" >/dev/null 2>&1
 		if [ $? -eq 0 ]; then
-			echo 531
+			max=531
 		else
-			echo 506
+			max=506
+		fi
+		command -v "e4crypt" >/dev/null 2>&1
+		if [ "$?" -eq 0 ]; then
+			e4crypt get_policy $TEST_DIR |
+					grep "Error" >/dev/null 2>&1
+			if [ $? -eq 0 ]; then
+				echo $max
+			else
+				echo $(($max-4))
+			fi
+		else
+			echo $max
 		fi
 		;;
 	*)
