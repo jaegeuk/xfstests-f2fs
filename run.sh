@@ -169,11 +169,12 @@ _fsstress()
 
 _watch()
 {
-	while true
-	do
-		f2fstat -i 10 -p /dev/$1
-		sleep 1
-	done
+	watch -n .2 tail -n +$(grep -m 1 -n sdb2 /sys/kernel/debug/f2fs/status |cut -f1 -d:) /sys/kernel/debug/f2fs/status
+#	while true
+#	do
+#		f2fstat -i 10 -p /dev/$1
+#		sleep 1
+#	done
 }
 
 case "$1" in
