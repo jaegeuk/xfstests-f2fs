@@ -82,6 +82,10 @@ _fs_opts()
 	echo 5 > /sys/fs/f2fs/$DEV/idle_interval
 	echo 10 > /sys/fs/f2fs/$DEV/ram_thresh
 	echo 2024 > /sys/fs/f2fs/$DEV/reclaim_segments
+
+	rand=`shuf -i 1000-2000 -n 1`
+	echo $rand > /sys/fs/f2fs/fault_injection/inject_rate
+	echo 127 > /sys/fs/f2fs/fault_injection/inject_type
 }
 
 _mount()
@@ -125,9 +129,9 @@ _init_crypt()
 cur=0
 _rm_50()
 {
-	for i in `seq 0 3`
+	for i in `seq 0 10`
 	do
-		idx=$((($cur + $i)%10))
+		idx=`printf '%x' $((($cur + $i)%20))`
 		rm -rf "$TESTDIR/test/p$idx"
 	done
 	cur=$(($cur + 1))
@@ -136,16 +140,22 @@ _rm_50()
 por_fsstress()
 {
 	while true; do
-		ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 1000 -r -f fsync=8 -f sync=0 -f write=8 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 10 -n 200000 -d $TESTDIR/test &
-		sleep 40
+		ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/test &
+		sleep 5
 		src/godown -n $TESTDIR
 		killall fsstress
-		fsck.f2fs /dev/$DEV
+		echo 3 > /proc/sys/vm/drop_caches
+		fsck.f2fs /dev/$DEV | grep -q -e "Fail"
+		if [ $? -eq  0 ]; then
+			exit
+		fi
 		sleep 1
 		umount $TESTDIR
+		echo 3 > /proc/sys/vm/drop_caches
+		fsck.f2fs /dev/$DEV
 		_mount
 		_rm_50
-	#	_fs_opts
+		_fs_opts
 	done
 }
 
