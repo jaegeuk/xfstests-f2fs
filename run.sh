@@ -187,6 +187,61 @@ _watch()
 #	done
 }
 
+_reset()
+{
+	umount /mnt/*
+	ls /dev/sg*
+
+	echo -n "reset for write_ptr, sg4? [sg4] "
+	read sg
+	if [ $sg -z ]; then
+		sg=sg4
+	fi
+
+	zbc_reset_write_ptr /dev/$sg -1
+
+	ls /dev/sd*
+
+	echo -n "reset for /dev/sdd? [sdd] "
+	read sdd
+	if [ $sdd -z ]; then
+		sdd=sdd
+	fi
+
+	readlink /sys/block/$sdd
+
+	echo -n "host number? [6] "
+	read host
+	if [ $host -z ]; then
+		host=6
+	fi
+
+	echo $host > /sys/block/$sdd/device/delete
+	echo "- - -" > /sys/class/scsi_host/host$host/scan
+
+	sleep 2
+	ls /dev/sd*
+
+	echo -n "go mkfs [sdd]? "
+	read sdd 
+	if [ $sdd -z ]; then
+		sdd=sdd
+	fi
+	umount /mnt/*
+	mkfs.f2fs -m /dev/$sdd
+
+	echo 1 > /sys/block/$sdd/device/queue_depth
+
+	echo -n "go mount? "
+	read go
+	_reload f2fs
+	mount -t f2fs /dev/$sdd $TESTDIR
+
+	echo -n "go fsstress? "
+	read go
+	ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/test
+}
+
 case "$1" in
 reload)
 	_reload_f2fs
@@ -234,5 +289,8 @@ all)
 	cp local.config.enc local.config
 	_check
 	_fsstress
+	;;
+reset)
+	_reset
 	;;
 esac
