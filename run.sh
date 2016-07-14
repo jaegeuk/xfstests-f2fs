@@ -3,7 +3,9 @@
 #VER=f2fs-3.18
 #VER=f2fs-3.10
 VER=f2fs
+#DEV=nvme0n1p1
 DEV=sdb1
+#DEV=pmem0
 TESTDIR=/mnt/test
 PH_STORAGE=/var/lib/phoronix-test-suite
 
@@ -12,6 +14,7 @@ AIO="aio-stress"
 TIO="tiobench"
 DBENCH="dbench"
 SQLITE="sqlite"
+IOZONE="iozone"
 MKFS="-t 1"
 
 truncate --size 0 /var/log/kern.log
@@ -19,6 +22,7 @@ truncate --size 0 /var/log/kern.log
 _reload()
 {
 	umount /mnt/*
+	umount /dev/$DEV
 	case $1 in
 	f2fs)
 		rmmod f2fs
@@ -320,6 +324,48 @@ _ph()
 	echo "phoronix-test-suite benchmark tiobench|compilebench|fs-mark|unpack-linux"
 }
 
+_random_write()
+{
+	echo "Load 1B keys sequentially into database....."
+	bpl=10485760;overlap=10;mcz=2;del=300000000;levels=6;ctrig=4; delay=8; stop=12; wbn=3; mbc=20; mb=67108864;wbs=134217728; dds=0; sync=0; r=500000000; t=1; vs=800; bs=65536; cs=1048576; of=500000; si=1000000; db_bench --benchmarks=fillseq --disable_seek_compaction=1 --mmap_read=0 --statistics=1 --histogram=1 --num=$r --threads=$t --value_size=$vs --block_size=$bs --cache_size=$cs --bloom_bits=10 --cache_numshardbits=4 --open_files=$of --verify_checksum=1 --db=$TESTDIR --sync=$sync --disable_wal=1 --compression_type=zlib --stats_interval=$si --compression_ratio=0.5 --disable_data_sync=$dds --write_buffer_size=$wbs --target_file_size_base=$mb --max_write_buffer_number=$wbn --max_background_compactions=$mbc --level0_file_num_compaction_trigger=$ctrig --level0_slowdown_writes_trigger=$delay --level0_stop_writes_trigger=$stop --num_levels=$levels --delete_obsolete_files_period_micros=$del --min_level_to_compress=$mcz --max_grandparent_overlap_factor=$overlap --stats_per_interval=1 --max_bytes_for_level_base=$bpl --use_existing_db=0
+
+	echo "Overwriting the 1B keys in database in random order...."
+	bpl=10485760;overlap=10;mcz=2;del=300000000;levels=6;ctrig=4; delay=8; stop=12; wbn=3; mbc=20; mb=67108864;wbs=134217728; dds=0; sync=0; r=500000000; t=1; vs=800; bs=65536; cs=1048576; of=500000; si=1000000; db_bench --benchmarks=overwrite --disable_seek_compaction=1 --mmap_read=0 --statistics=1 --histogram=1 --num=$r --threads=$t --value_size=$vs --block_size=$bs --cache_size=$cs --bloom_bits=10 --cache_numshardbits=4 --open_files=$of --verify_checksum=1 --db=$TESTDIR --sync=$sync --disable_wal=1 --compression_type=zlib --stats_interval=$si --compression_ratio=0.5 --disable_data_sync=$dds --write_buffer_size=$wbs --target_file_size_base=$mb --max_write_buffer_number=$wbn --max_background_compactions=$mbc --level0_file_num_compaction_trigger=$ctrig --level0_slowdown_writes_trigger=$delay --level0_stop_writes_trigger=$stop --num_levels=$levels --delete_obsolete_files_period_micros=$del --min_level_to_compress=$mcz --max_grandparent_overlap_factor=$overlap --stats_per_interval=1 --max_bytes_for_level_base=$bpl --use_existing_db=1
+}
+
+_bulk()
+{
+	echo "Bulk load database into L0...."
+	bpl=10485760;overlap=10;mcz=2;del=300000000;levels=2;ctrig=10000000; delay=10000000; stop=10000000; wbn=30; mbc=20; mb=1073741824;wbs=268435456; dds=1; sync=0; r=1000000000; t=1; vs=800; bs=65536; cs=1048576; of=500000; si=1000000; db_bench --benchmarks=fillrandom --disable_seek_compaction=1 --mmap_read=0 --statistics=1 --histogram=1 --num=$r --threads=$t --value_size=$vs --block_size=$bs --cache_size=$cs --bloom_bits=10 --cache_numshardbits=4 --open_files=$of --verify_checksum=1 --db=$TESTDIR --sync=$sync --disable_wal=1 --compression_type=zlib --stats_interval=$si --compression_ratio=0.5 --disable_data_sync=$dds --write_buffer_size=$wbs --target_file_size_base=$mb --max_write_buffer_number=$wbn --max_background_compactions=$mbc --level0_file_num_compaction_trigger=$ctrig --level0_slowdown_writes_trigger=$delay --level0_stop_writes_trigger=$stop --num_levels=$levels --delete_obsolete_files_period_micros=$del --min_level_to_compress=$mcz --max_grandparent_overlap_factor=$overlap --stats_per_interval=1 --max_bytes_for_level_base=$bpl --memtablerep=vector --use_existing_db=0 --disable_auto_compactions=1 --source_compaction_factor=10000000
+
+	echo "Running manual compaction to do a global sort map-reduce style...."
+	bpl=10485760;overlap=10;mcz=2;del=300000000;levels=2;ctrig=10000000; delay=10000000; stop=10000000; wbn=30; mbc=20; mb=1073741824;wbs=268435456; dds=1; sync=0; r=1000000000; t=1; vs=800; bs=65536; cs=1048576; of=500000; si=1000000; db_bench --benchmarks=compact --disable_seek_compaction=1 --mmap_read=0 --statistics=1 --histogram=1 --num=$r --threads=$t --value_size=$vs --block_size=$bs --cache_size=$cs --bloom_bits=10 --cache_numshardbits=4 --open_files=$of --verify_checksum=1 --db=$TESTDIR --sync=$sync --disable_wal=1 --compression_type=zlib --stats_interval=$si --compression_ratio=0.5 --disable_data_sync=$dds --write_buffer_size=$wbs --target_file_size_base=$mb --max_write_buffer_number=$wbn --max_background_compactions=$mbc --level0_file_num_compaction_trigger=$ctrig --level0_slowdown_writes_trigger=$delay --level0_stop_writes_trigger=$stop --num_levels=$levels --delete_obsolete_files_period_micros=$del --min_level_to_compress=$mcz --max_grandparent_overlap_factor=$overlap --stats_per_interval=1 --max_bytes_for_level_base=$bpl --memtablerep=vector --use_existing_db=1 --disable_auto_compactions=1 --source_compaction_factor=10000000
+}
+
+_random_read()
+{
+	echo "Load 1B keys sequentially into database....."
+	bpl=10485760;overlap=10;mcz=2;del=300000000;levels=6;ctrig=4; delay=8; stop=12; wbn=3; mbc=20; mb=67108864;wbs=134217728; dds=1; sync=0; r=1000000000; t=1; vs=800; bs=4096; cs=1048576; of=500000; si=1000000; db_bench --benchmarks=fillseq --disable_seek_compaction=1 --mmap_read=0 --statistics=1 --histogram=1 --num=$r --threads=$t --value_size=$vs --block_size=$bs --cache_size=$cs --bloom_bits=10 --cache_numshardbits=6 --open_files=$of --verify_checksum=1 --db=$TESTDIR --sync=$sync --disable_wal=1 --compression_type=none --stats_interval=$si --compression_ratio=0.5 --disable_data_sync=$dds --write_buffer_size=$wbs --target_file_size_base=$mb --max_write_buffer_number=$wbn --max_background_compactions=$mbc --level0_file_num_compaction_trigger=$ctrig --level0_slowdown_writes_trigger=$delay --level0_stop_writes_trigger=$stop --num_levels=$levels --delete_obsolete_files_period_micros=$del --min_level_to_compress=$mcz --max_grandparent_overlap_factor=$overlap --stats_per_interval=1 --max_bytes_for_level_base=$bpl --use_existing_db=0
+	echo "Reading 1B keys in database in random order...."
+	bpl=10485760;overlap=10;mcz=2;del=300000000;levels=6;ctrig=4; delay=8; stop=12; wbn=3; mbc=20; mb=67108864;wbs=134217728; dds=0; sync=0; r=1000000000; t=32; vs=800; bs=4096; cs=1048576; of=500000; si=1000000; db_bench --benchmarks=readrandom --disable_seek_compaction=1 --mmap_read=0 --statistics=1 --histogram=1 --num=$r --threads=$t --value_size=$vs --block_size=$bs --cache_size=$cs --bloom_bits=10 --cache_numshardbits=6 --open_files=$of --verify_checksum=1 --db=$TESTDIR --sync=$sync --disable_wal=1 --compression_type=none --stats_interval=$si --compression_ratio=0.5 --disable_data_sync=$dds --write_buffer_size=$wbs --target_file_size_base=$mb --max_write_buffer_number=$wbn --max_background_compactions=$mbc --level0_file_num_compaction_trigger=$ctrig --level0_slowdown_writes_trigger=$delay --level0_stop_writes_trigger=$stop --num_levels=$levels --delete_obsolete_files_period_micros=$del --min_level_to_compress=$mcz --max_grandparent_overlap_factor=$overlap --stats_per_interval=1 --max_bytes_for_level_base=$bpl --use_existing_db=1
+}
+
+_readwhile_write()
+{
+	echo "Load 1B keys sequentially into database....."
+	num=1073741824;bpl=536870912;mb=67108864;overlap=10;mcz=2;del=300000000;levels=6;ctrig=4;delay=8;stop=12;wbn=3;mbc=20;wbs=134217728;dds=0;sync=0;vs=800;bs=4096;cs=17179869184;of=500000;wps=0;si=10000000; db_bench --benchmarks=fillseq --disable_seek_compaction=1 --mmap_read=0 --statistics=1 --histogram=1 --num=$num --threads=1 --value_size=$vs --block_size=$bs --cache_size=$cs --bloom_bits=10 --cache_numshardbits=6 --open_files=$of --verify_checksum=1 --db=$TESTDIR --sync=$sync --disable_wal=1 --compression_type=none --stats_interval=$si --compression_ratio=1 --disable_data_sync=$dds --write_buffer_size=$wbs --target_file_size_base=$mb --max_write_buffer_number=$wbn --max_background_compactions=$mbc --level0_file_num_compaction_trigger=$ctrig --level0_slowdown_writes_trigger=$delay --level0_stop_writes_trigger=$stop --num_levels=$levels --delete_obsolete_files_period_micros=$del --min_level_to_compress=$mcz --max_grandparent_overlap_factor=$overlap --stats_per_interval=1 --max_bytes_for_level_base=$bpl --use_existing_db=0
+	echo "Reading while writing 100M keys in database in random order...."
+	num=134217728;bpl=536870912;mb=67108864;overlap=10;mcz=2;del=300000000;levels=6;ctrig=4;delay=8;stop=12;wbn=3;mbc=20;wbs=134217728;dds=0;sync=0;t=32;vs=800;bs=4096;cs=17179869184;of=500000;wps=0;si=10000000; db_bench --benchmarks=readwhilewriting --disable_seek_compaction=1 --mmap_read=0 --statistics=1 --histogram=1 --num=$num --threads=$t --value_size=$vs --block_size=$bs --cache_size=$cs --bloom_bits=10 --cache_numshardbits=6 --open_files=$of --verify_checksum=1 --db=$TESTDIR --sync=$sync --disable_wal=0 --compression_type=none --stats_interval=$si --compression_ratio=1 --disable_data_sync=$dds --write_buffer_size=$wbs --target_file_size_base=$mb --max_write_buffer_number=$wbn --max_background_compactions=$mbc --level0_file_num_compaction_trigger=$ctrig --level0_slowdown_writes_trigger=$delay --level0_stop_writes_trigger=$stop --num_levels=$levels --delete_obsolete_files_period_micros=$del --min_level_to_compress=$mcz --max_grandparent_overlap_factor=$overlap --stats_per_interval=1 --max_bytes_for_level_base=$bpl --use_existing_db=1 --writes_per_second=$wps
+}
+
+_rocks()
+{
+	#_bulk
+	_random_write
+	#_random_read
+	#_readwhile_write
+}
+
 case "$1" in
 reload)
 	if [ $2 ]; then
@@ -328,10 +374,10 @@ reload)
 	_reload f2fs
 	#mkfs.f2fs -O encrypt /dev/$DEV
 	#mkfs.f2fs -a 0 -s 20 /dev/$DEV
-	mkfs.f2fs -t 0 -O encrypt /dev/$DEV
+	mkfs.f2fs -O encrypt /dev/$DEV
 	#_error
 	_mount f2fs
-	_fs_opts
+	#_fs_opts
 #	echo foo | e4crypt add_key -S 0x12 $TESTDIR
 	;;
 xfstests)
@@ -374,6 +420,12 @@ all)
 reset)
 	_reset
 	;;
+iozone)
+	_ph f2fs
+	export TEST_RESULTS_IDENTIFIER=F2FS
+	#phoronix-test-suite debug-run $IOZONE
+	phoronix-test-suite benchmark $IOZONE
+	;;
 aio)
 	_ph f2fs
 	export TEST_RESULTS_IDENTIFIER=F2FS
@@ -383,6 +435,11 @@ aio-xfs)
 	_ph xfs
 	export TEST_RESULTS_IDENTIFIER=F2FS
 	phoronix-test-suite batch-benchmark $AIO
+	;;
+fio)
+	_ph f2fs
+	export TEST_RESULTS_IDENTIFIER=F2FS
+	phoronix-test-suite batch-benchmark fio
 	;;
 tio)
 	_ph f2fs
@@ -419,9 +476,9 @@ phall)
 	_ph ext4
 	export TEST_RESULTS_IDENTIFIER=EXT4-$DESC
 	phoronix-test-suite batch-benchmark $TESTSET < set
-	#_ph xfs
-	#export TEST_RESULTS_IDENTIFIER=XFS-$DESC
-	#phoronix-test-suite batch-benchmark $TESTSET < set
+#	_ph xfs
+#	export TEST_RESULTS_IDENTIFIER=XFS-$DESC
+#	phoronix-test-suite batch-benchmark $TESTSET < set
 	ls /var/www/html/test-results/
 	echo "phoronix-test-suite merge-results 2012-12-30-2102 2012-12-30-2106"
 	;;
@@ -432,7 +489,15 @@ fs_mark)
 	_fs_mark
 	;;
 phall_two)
-	./run.sh phall nvme0n1 NVME
+	./run.sh phall nvme0n1p1 NVME
 	./run.sh phall sdb1 SSD
+	;;
+rocksdb)
+	_rocks
+	;;
+iozone2)
+	cp iozone /mnt/test
+	cd /mnt/test
+	./iozone -e -r 1m -s 2048M -i0
 	;;
 esac
