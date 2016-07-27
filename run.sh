@@ -2,10 +2,12 @@
 
 #VER=f2fs-3.18
 #VER=f2fs-3.10
+#VER=f2fs-4.1
+#VER=f2fs-4.4
 VER=f2fs
 #DEV=nvme0n1p1
-DEV=sdb1
-#DEV=pmem0
+#DEV=sdb1
+DEV=md0
 TESTDIR=/mnt/test
 PH_STORAGE=/var/lib/phoronix-test-suite
 
@@ -21,12 +23,15 @@ truncate --size 0 /var/log/kern.log
 
 _reload()
 {
+	modprobe brd
+	mdadm -q --create /dev/md0 --chunk=256 --level=raid0 --raid-devices=4 --force --assume-clean /dev/ram0 /dev/ram1 /dev/ram2 /dev/ram3
 	umount /mnt/*
 	umount /dev/$DEV
 	case $1 in
 	f2fs)
 		rmmod f2fs
 		insmod ~/$VER/fs/f2fs/f2fs.ko
+	#	insmod ~/$VER/fs/crypto/fscrypto.ko
 		;;
 	xfs)
 		rmmod xfs
@@ -42,8 +47,8 @@ _check()
 	umount /mnt/*
 #	mkfs.$FS /dev/sdb1
 #	mkfs.$FS /dev/sdc1
-	mkfs.$FS -O encrypt $MKFS /dev/sdb1
-	mkfs.$FS -O encrypt $MKFS /dev/sdc1
+#	mkfs.$FS -O encrypt $MKFS /dev/sdb1
+#	mkfs.$FS -O encrypt $MKFS /dev/sdc1
 #	mkfs.$FS -O encrypt /dev/sdb1
 #	mkfs.$FS -O encrypt /dev/sdc1
 #	t="tests/generic/221 tests/generic/223 tests/generic/224"
@@ -67,7 +72,7 @@ _check()
 #	t="tests/generic/128"
 #	t="tests/generic/080 tests/generic/081"
 #	t="tests/f2fs/001"
-	./check -x quota,clone,dedupe $t
+	./check -x quota,clone,dedupe,thin $t
 }
 
 _mkfs()
@@ -79,6 +84,8 @@ _mkfs()
 		mkfs.ext4 -F /dev/$DEV;;
 	"xfs")
 		mkfs.xfs -f /dev/$DEV;;
+	"btrfs")
+		mkfs.btrfs -f /dev/$DEV;;
 	esac
 }
 
@@ -92,8 +99,8 @@ _debug_check()
 	umount /mnt/*
 #	mkfs.$FS /dev/sdb1
 #	mkfs.$FS /dev/sdc1
-	mkfs.$FS -O encrypt /dev/sdb1
-	mkfs.$FS -O encrypt /dev/sdc1
+#	mkfs.$FS -O encrypt /dev/sdb1
+#	mkfs.$FS -O encrypt /dev/sdc1
 #	t="tests/generic/221 tests/generic/223 tests/generic/224"
 #	t="tests/generic/068 tests/generic/069 tests/generic/070"
 #	t="tests/generic/016 tests/genenric/014 tests/generic/019 tests/generic/027"
@@ -122,9 +129,9 @@ _fs_opts()
 	echo 10 > /sys/fs/f2fs/$DEV/ram_thresh
 	echo 2024 > /sys/fs/f2fs/$DEV/reclaim_segments
 
-	rand=`shuf -i 1000-2000 -n 1`
-	echo $rand > /sys/fs/f2fs/fault_injection/inject_rate
-	echo 127 > /sys/fs/f2fs/fault_injection/inject_type
+	rand=`shuf -i 3000-5000 -n 1`
+	echo $rand > /sys/fs/f2fs/$DEV/inject_rate
+	echo 255 > /sys/fs/f2fs/$DEV/inject_type
 }
 
 _mount()
@@ -133,13 +140,23 @@ _mount()
 	"f2fs")
 		#mount -t f2fs /dev/$DEV -o no_heap,background_gc=off,active_logs=2,discard $TESTDIR
 		#mount -t f2fs /dev/$DEV -o background_gc=sync,active_logs=6,discard $TESTDIR
-		mount -t f2fs /dev/$DEV -o background_gc=on,active_logs=6,discard $TESTDIR
-	#	mount -t f2fs /dev/$DEV -o background_gc=off,active_logs=6,discard $TESTDIR
+		#mount -t f2fs /dev/$DEV -o background_gc=on,active_logs=6,discard $TESTDIR
+		rand=`shuf -i 2000-4000 -n 1`
+		mount -t f2fs /dev/$DEV -o background_gc=on,active_logs=6,discard,fault_injection=$rand $TESTDIR
+		_fs_opts
 		;;
 	*)
 		mount -t $1 -o discard /dev/$DEV $TESTDIR
 		;;
 	esac
+}
+
+_fsck()
+{
+	fsck.f2fs /dev/$DEV | grep -q -e "Fail"
+	if [ $? -eq  0 ]; then
+		exit
+	fi
 }
 
 _error()
@@ -177,30 +194,33 @@ _rm_50()
 	for i in `seq 0 10`
 	do
 		idx=`printf '%x' $((($cur + $i)%20))`
-		rm -rf "$TESTDIR/test/p$idx"
+		rm -rf "$TESTDIR/test/p$idx" 2>/dev/null
 	done
 	cur=$(($cur + 1))
 }
 
 por_fsstress()
 {
+	_fs_opts
+
 	while true; do
 		ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/test &
-		sleep 5
-		src/godown -n $TESTDIR
+		sleep 10
+		src/godown $TESTDIR
 		killall fsstress
 		echo 3 > /proc/sys/vm/drop_caches
-		fsck.f2fs /dev/$DEV | grep -q -e "Fail"
-		if [ $? -eq  0 ]; then
-			exit
-		fi
+		_fsck
 		sleep 1
 		umount $TESTDIR
 		echo 3 > /proc/sys/vm/drop_caches
-		fsck.f2fs /dev/$DEV
+		_fsck
+		_mount f2fs
+		rm $TESTDIR/testfile
+		touch $TESTDIR/testfile
+		umount $TESTDIR
+		_fsck
 		_mount f2fs
 		_rm_50
-		_fs_opts
 	done
 }
 
@@ -212,11 +232,11 @@ _fsstress()
 		#ltp/fsstress -r -f fsync=0 -f sync=0 -f write=10 -f dwrite=4 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -f link=1 -S t -p 10 -n 200000 -d $TESTDIR/test
 		#ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 1000 -r -z -f chown=1 -f creat=4 -f dread=1 -f dwrite=1 -f fallocate=1 -f fdatasync=1 -f fiemap=1 -f fsync=1 -f getattr=1 -f getdents=1 -f link=1 -f mkdir=0 -f mknod=1 -f punch=1 -f zero=1 -f collapse=1 -f insert=1 -f read=1 -f readlink=1 -f rename=1 -f rmdir=1 -f setxattr=1 -f stat=1 -f symlink=2 -f truncate=2 -f unlink=2 -f write=4 -S t -p 10 -n 10000 -d $TESTDIR/test
 		umount $TESTDIR
-		fsck.f2fs /dev/$DEV
+		_fsck
 		_mount f2fs
 		rm -rf $TESTDIR/*
 		umount $TESTDIR
-		fsck.f2fs /dev/$DEV
+		_fsck
 		_mount f2fs
 		_fs_opts
 	done
@@ -287,18 +307,38 @@ _reset()
 	ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/test
 }
 
+_aim7()
+{
+	modprobe brd
+	mdadm -q --create /dev/md0 --chunk=256 --level=raid0 --raid-devices=4 --force --assume-clean /dev/ram0 /dev/ram1 /dev/ram2 /dev/ram3
+	mkfs.f2fs /dev/md0
+	mount -t f2fs /dev/md0 $TESTDIR
+
+	echo -n "go test? "
+	read go
+
+	cp -r aim7 $TESTDIR
+	mkdir $TESTDIR/test
+
+	cd $TESTDIR/aim7
+	#./multitask -t < aim7_set
+	./multitask -t < aim7_set2
+}
+
 _fs_mark()
 {
-	time fs_mark  -D  10000  -S0  -n  100000  -s  0  -L  32	\
-		-d  $TESTDIR/0  -d  $TESTDIR/1	\
-		-d  $TESTDIR/2  -d  $TESTDIR/3 \
-		-d  $TESTDIR/4  -d  $TESTDIR/5 \
-		-d  $TESTDIR/6  -d  $TESTDIR/7 \
-		-d  $TESTDIR/8  -d  $TESTDIR/9 \
-		-d  $TESTDIR/10  -d  $TESTDIR/11 \
-		-d  $TESTDIR/12  -d  $TESTDIR/13 \
-		-d  $TESTDIR/14  -d  $TESTDIR/15 
-	#	| tee >(stats --trim-outliers | tail -1 1>&2)
+	fs_mark -d $TESTDIR/1 -d $TESTDIR/2 -d $TESTDIR/3 -d $TESTDIR/4 -D 16 -N 256 -n 294912 -L 4 -S 1 -s 8192
+
+#	time fs_mark  -D  10000  -S0  -n  100000  -s  0  -L  32	\
+#		-d  $TESTDIR/0  -d  $TESTDIR/1	\
+#		-d  $TESTDIR/2  -d  $TESTDIR/3 \
+#		-d  $TESTDIR/4  -d  $TESTDIR/5 \
+#		-d  $TESTDIR/6  -d  $TESTDIR/7 \
+#		-d  $TESTDIR/8  -d  $TESTDIR/9 \
+#		-d  $TESTDIR/10  -d  $TESTDIR/11 \
+#		-d  $TESTDIR/12  -d  $TESTDIR/13 \
+#		-d  $TESTDIR/14  -d  $TESTDIR/15 
+#		| tee >(stats --trim-outliers | tail -1 1>&2)
 }
 
 _ph()
@@ -381,10 +421,10 @@ reload)
 #	echo foo | e4crypt add_key -S 0x12 $TESTDIR
 	;;
 xfstests)
-	mkfs.f2fs /dev/ram0
-	mkfs.f2fs /dev/ram1
-	cp local.config.ram local.config
-	_check
+#	mkfs.f2fs /dev/ram0
+#	mkfs.f2fs /dev/ram1
+#	cp local.config.ram local.config
+#	_check
 	cp local.config.noenc local.config
 	_check
 	cp local.config.enc local.config
@@ -470,27 +510,52 @@ phall)
 	else
 		DESC=$DEV
 	fi
+	if [ $4 ]; then
+		SET=$4
+	else
+		SET=set
+	fi
 	_ph f2fs
 	export TEST_RESULTS_IDENTIFIER=F2FS-$DESC
-	phoronix-test-suite batch-benchmark $TESTSET < set
+	phoronix-test-suite batch-benchmark $TESTSET < $SET
 	_ph ext4
 	export TEST_RESULTS_IDENTIFIER=EXT4-$DESC
-	phoronix-test-suite batch-benchmark $TESTSET < set
-#	_ph xfs
-#	export TEST_RESULTS_IDENTIFIER=XFS-$DESC
-#	phoronix-test-suite batch-benchmark $TESTSET < set
+	phoronix-test-suite batch-benchmark $TESTSET < $SET
+	_ph xfs
+	export TEST_RESULTS_IDENTIFIER=XFS-$DESC
+	phoronix-test-suite batch-benchmark $TESTSET < $SET
+	_ph btrfs
+	export TEST_RESULTS_IDENTIFIER=BTRFS-$DESC
+	phoronix-test-suite batch-benchmark $TESTSET < $SET
 	ls /var/www/html/test-results/
 	echo "phoronix-test-suite merge-results 2012-12-30-2102 2012-12-30-2106"
 	;;
 fs_mark)
+	if [ $2 ]; then
+		DEV=$2
+	fi
+	rm fs_log.txt.*
+	echo ""
+	echo === $DEV -- F2FS === >> fs_log.txt
 	_init f2fs
 	_fs_mark
+	echo ""
+	echo === $DEV -- EXT4 === >> fs_log.txt
 	_init ext4
+	_fs_mark
+	echo ""
+	echo === $DEV -- XFS === >> fs_log.txt
+	_init xfs
+	_fs_mark
+	echo ""
+	echo === $DEV -- BTRFS === >> fs_log.txt
+	_init btrfs
 	_fs_mark
 	;;
 phall_two)
-	./run.sh phall nvme0n1p1 NVME
-	./run.sh phall sdb1 SSD
+	./run.sh phall md0 RAMDISK set
+	./run.sh phall nvme0n1p1 NVME set
+	./run.sh phall sdb1 SSD set
 	;;
 rocksdb)
 	_rocks
@@ -499,5 +564,35 @@ iozone2)
 	cp iozone /mnt/test
 	cd /mnt/test
 	./iozone -e -r 1m -s 2048M -i0
+	;;
+tiotests)
+	_init f2fs
+	./intest.sh
+	_init ext4
+	./intest.sh
+	_init xfs
+	./intest.sh
+	_init btrfs
+	./intest.sh
+	;;
+init)
+	_init $2
+	;;
+aim7)
+	_aim7
+	;;
+all-test)
+	rm -rf /var/www/html/test-results/*
+	./run.sh phall_two
+	_umount
+	rm fs_log.txt
+	./run.sh fs_mark md0
+	./run.sh fs_mark nvme0n1p1
+	./run.sh fs_mark sdb1
+	_umount
+	cd ../fxmark-f2fs
+	rm -rf logs/*
+	./bin/run-fxmark.py
+	echo "bin/plotter.py --ty sc --log logs/** --out {output pdf file}"
 	;;
 esac

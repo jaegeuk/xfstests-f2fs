@@ -1,0 +1,13 @@
+#!/bin/sh
+# This shell script is used by AIM to prepare the "save" directory
+# for email by the user.
+# The save directory name is passed in as a parameter and is accessed
+# as $1
+# The file "SendMe" is created for mailing.
+#				'@(#) .mail_prep:1.1 1/22/96 00:00:00'
+if [ $1x = x ]; then
+  echo "Please specify the save directory name:"
+  echo "   " $0 "<save dir>"
+  exit 0
+fi
+tar cf - $1 | compress | uuencode tarfile.Z > SendMe
