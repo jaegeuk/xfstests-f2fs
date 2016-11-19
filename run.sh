@@ -582,7 +582,9 @@ aim7)
 	_aim7
 	;;
 all-test)
+	_umount
 	rm -rf /var/www/html/test-results/*
+	dd if=/dev/zero of=/dev/md0 bs=1M
 	./run.sh phall_two
 	_umount
 	rm fs_log.txt
