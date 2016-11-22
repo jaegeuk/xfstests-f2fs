@@ -83,7 +83,6 @@ ls -R $SCRATCH_MNT/a | _filter_scratch
 echo "File digests after log replay:"
 # Must match what we got before the power failure.
 md5sum $SCRATCH_MNT/a/foo | _filter_scratch
-md5sum $SCRATCH_MNT/a/bar | _filter_scratch
 
 _unmount_flakey
 status=0
