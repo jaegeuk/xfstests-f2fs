@@ -47,6 +47,8 @@ _supported_os Linux
 _require_scsi_debug
 _require_xfs_io_command "fpunch"
 
+_notrun "block device test only"
+
 echo "Create and format"
 dev=$(_get_scsi_debug_dev 512 512 0 4 "lbpws=1 lbpws10=1")
 _pwrite_byte 0x62 0 4m $dev >> $seqres.full
