@@ -54,6 +54,7 @@ _require_xfs_io_command "fcollapse"
 _require_xfs_io_command "fzero"
 _require_xfs_io_command "fpunch"
 
+_notrun "block device test only"
 
 echo "Create and format"
 dev=$(_get_scsi_debug_dev 4096 4096 0 4 "lbpws=1 lbpws10=1")
