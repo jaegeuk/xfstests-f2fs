@@ -70,6 +70,8 @@ _require_scratch_nocheck
 _require_xfs_io_command "falloc"
 _require_dm_target thin-pool
 
+_notrun "thin device test unnecessarily"
+
 _setup_thin
 _workout
 _dmthin_check_fs
