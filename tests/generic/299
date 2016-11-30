@@ -127,12 +127,12 @@ _workout()
 
 	for ((i=0; ; i++))
 	do
-	    for ((k=1; k <= NUM_JOBS; k++))
+	    for ((k=0; k < NUM_JOBS; k++))
 	    do
 		$XFS_IO_PROG -f -c "falloc 0 $FILE_SIZE" \
 			$SCRATCH_MNT/direct_aio.$k.0 >> $seqres.full 2>&1
 	    done
-	    for ((k=1; k <= NUM_JOBS; k++))
+	    for ((k=0; k < NUM_JOBS; k++))
 	    do
 		$XFS_IO_PROG -c "truncate  0" \
 			$SCRATCH_MNT/direct_aio.$k.0 >> $seqres.full 2>&1
