@@ -1,0 +1,5 @@
+QA output created by 003
+wrote 4096/4096 bytes at offset 0
+XXX Bytes, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+62c6c6286e69526fd15cb97eb1644651  SCRATCH_MNT/testfile
+62c6c6286e69526fd15cb97eb1644651  SCRATCH_MNT/testfile
