@@ -5,4 +5,5 @@
 #
 001 auto quick rw
 002 auto quick rw encrypt compress
+098 auto quick rw
 099 auto quick rw
