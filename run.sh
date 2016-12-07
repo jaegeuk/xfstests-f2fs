@@ -18,6 +18,8 @@ DBENCH="dbench"
 SQLITE="sqlite"
 IOZONE="iozone"
 MKFS="-t 1"
+FSSET="f2fs ext4 xfs btrfs"
+RESULTS=""
 
 truncate --size 0 /var/log/kern.log
 
@@ -364,6 +366,14 @@ _ph()
 	echo "phoronix-test-suite benchmark tiobench|compilebench|fs-mark|unpack-linux"
 }
 
+_update_results()
+{
+	for i in $FSSET
+	do
+		RESULTS="$RESULTS $i-$1"
+	done
+}
+
 _random_write()
 {
 	echo "Load 1B keys sequentially into database....."
@@ -515,20 +525,13 @@ phall)
 	else
 		SET=set
 	fi
-	_ph f2fs
-	export TEST_RESULTS_IDENTIFIER=F2FS-$DESC
-	phoronix-test-suite batch-benchmark $TESTSET < $SET
-	_ph ext4
-	export TEST_RESULTS_IDENTIFIER=EXT4-$DESC
-	phoronix-test-suite batch-benchmark $TESTSET < $SET
-	_ph xfs
-	export TEST_RESULTS_IDENTIFIER=XFS-$DESC
-	phoronix-test-suite batch-benchmark $TESTSET < $SET
-	_ph btrfs
-	export TEST_RESULTS_IDENTIFIER=BTRFS-$DESC
-	phoronix-test-suite batch-benchmark $TESTSET < $SET
-	ls /var/www/html/test-results/
-	echo "phoronix-test-suite merge-results 2012-12-30-2102 2012-12-30-2106"
+	for i in $FSSET
+	do
+		_ph $i
+		export TEST_RESULTS_NAME=$i-$DESC
+		export TEST_RESULTS_IDENTIFIER=$i-$DESC
+		phoronix-test-suite batch-benchmark $TESTSET < $SET
+	done
 	;;
 fs_mark)
 	if [ $2 ]; then
@@ -553,9 +556,13 @@ fs_mark)
 	_fs_mark
 	;;
 phall_two)
-	./run.sh phall md0 RAMDISK set
-	./run.sh phall nvme0n1p1 NVME set
-	./run.sh phall sdb1 SSD set
+	./run.sh phall md0 ramdisk set
+	_update_results ramdisk
+	./run.sh phall nvme0n1p1 nvme set
+	_update_results nvme
+	./run.sh phall sdb1 ssd set
+	_update_results ssd
+	phoronix-test-suite merge-results $RESULTS
 	;;
 rocksdb)
 	_rocks
