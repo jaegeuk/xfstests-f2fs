@@ -142,7 +142,7 @@ _mount()
 	"f2fs")
 		#mount -t f2fs /dev/$DEV -o no_heap,background_gc=off,active_logs=2,discard $TESTDIR
 		#mount -t f2fs /dev/$DEV -o background_gc=sync,active_logs=6,discard $TESTDIR
-		mount -t f2fs /dev/$DEV $TESTDIR
+		mount -t f2fs -o discard /dev/$DEV $TESTDIR
 		#rand=`shuf -i 2000-4000 -n 1`
 		#mount -t f2fs /dev/$DEV -o background_gc=on,active_logs=6,discard,fault_injection=$rand $TESTDIR
 		#_fs_opts
