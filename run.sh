@@ -74,7 +74,7 @@ _check()
 #	t="tests/generic/128"
 #	t="tests/generic/080 tests/generic/081"
 #	t="tests/f2fs/001"
-	./check -x quota,clone,dedupe,thin $t
+	./check -x $1 $t
 }
 
 _mkfs()
@@ -436,9 +436,9 @@ xfstests)
 #	cp local.config.ram local.config
 #	_check
 	cp local.config.noenc local.config
-	_check
+	_check "quota,clone,dedupe,thin"
 	cp local.config.enc local.config
-	_check
+	_check "quota,clone,dedupe,thin,encrypt"
 	;;
 fsstress)
 	_init f2fs
