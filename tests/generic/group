@@ -407,7 +407,7 @@
 402 auto quick rw
 403 auto quick attr
 404 auto quick insert
-405 auto mkfs
+405 auto mkfs thin
 406 auto quick dangerous
 407 auto quick clone metadata
 408 auto quick clone dedupe metadata
