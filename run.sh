@@ -416,6 +416,15 @@ _rocks()
 	#_readwhile_write
 }
 
+_fill_dd()
+{
+	for i in `seq 1 $1`
+	do
+		dd if=/dev/zero of=$TESTDIR/test_$i bs=1M count=200000
+	done
+	sync
+}
+
 case "$1" in
 reload)
 	if [ $2 ]; then
