@@ -361,6 +361,8 @@ _scratch_mount()
 
 _scratch_unmount()
 {
+	sleep 2
+
 	case "$FSTYP" in
 	overlay)
 		_overlay_scratch_unmount
@@ -412,6 +414,8 @@ _test_mount()
 
 _test_unmount()
 {
+	sleep 2
+
 	if [ "$FSTYP" == "overlay" ]; then
 		_overlay_test_unmount
 	else
@@ -2113,6 +2117,8 @@ _umount_or_remount_ro()
 	echo "Usage: _umount_or_remount_ro <device>" 1>&2
 	exit 1
     fi
+
+    sleep 2
 
     device=$1
     mountpoint=`_is_mounted $device`
