@@ -155,8 +155,8 @@ _mount()
 
 _fsck()
 {
-	fsck.f2fs /dev/$DEV | grep -q -e "Fail"
-	if [ $? -eq  0 ]; then
+	res=`fsck.f2fs /dev/$DEV | grep "Fail"`
+	if [ "$res" ]; then
 		exit
 	fi
 }
