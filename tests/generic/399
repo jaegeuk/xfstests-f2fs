@@ -64,7 +64,7 @@ _require_xfs_io_command "set_encpolicy"
 _require_command "$XZ_PROG" xz
 _require_command "$KEYCTL_PROG" keyctl
 
-#_new_session_keyring
+_new_session_keyring
 
 #
 # Set up a small filesystem containing an encrypted directory.  64 MB is enough
