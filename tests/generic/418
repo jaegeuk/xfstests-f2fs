@@ -46,7 +46,7 @@ _require_test_program "feature"
 
 diotest=$here/src/dio-invalidate-cache
 testfile=$TEST_DIR/$seq-diotest
-sectorsize=`blockdev --getss $TEST_DEV`
+blocksize=`blockdev --getbsz $TEST_DEV`
 pagesize=`$here/src/feature -s`
 
 # test case array, test different write/read combinations
@@ -92,12 +92,12 @@ runtest()
 	done
 }
 
-while [ $sectorsize -le $((pagesize * 2)) ]; do
+while [ $blocksize -le $((pagesize * 2)) ]; do
 	# reproducer for the original bug
-	runtest $((10 * LOAD_FACTOR)) -b $sectorsize -n 3 -i 1
+	runtest $((10 * LOAD_FACTOR)) -b $blocksize -n 3 -i 1
 	# try more processes and iterations
-	runtest $((5 * LOAD_FACTOR))  -b $sectorsize -n 8 -i 4
-	sectorsize=$((sectorsize * 2))
+	runtest $((5 * LOAD_FACTOR))  -b $blocksize -n 8 -i 4
+	blocksize=$((blocksize * 2))
 done
 echo "Silence is golden"
 
