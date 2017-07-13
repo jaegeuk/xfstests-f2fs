@@ -178,6 +178,7 @@ _get_hugepagesize()
 _mount()
 {
     $MOUNT_PROG `_mount_ops_filter $*`
+    return $?
 }
 
 # Call _mount to do mount operation but also save mountpoint to
