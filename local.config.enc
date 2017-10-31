@@ -3,4 +3,4 @@
 . local.config.f2fs
 
 export F2FS_MKFS_OPTIONS="-f -O encrypt"
-export F2FS_MOUNT_OPTIONS="-o inline_xattr,discard" #inline_data is set by default
+export F2FS_MOUNT_OPTIONS="-o inline_xattr,discard,fsync_mode=strict" #inline_data is set by default

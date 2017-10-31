@@ -5,9 +5,9 @@
 #VER=f2fs-4.1
 #VER=f2fs-4.4
 VER=f2fs
-#DEV=nvme0n1p1
+DEV=nvme0n1
 #DEV=sdb1
-DEV=md0
+#DEV=sdc
 MAIN=nvme0n1p1
 MAINDEV=sdb2
 
@@ -26,6 +26,13 @@ IOZONE="iozone"
 MKFS="-t 1"
 FSSET="f2fs ext4 xfs btrfs"
 RESULTS=""
+
+pids=`pidof sshd`
+for i in $pids
+do
+	echo -17 > /proc/$i/oom_adj
+done
+echo -17 > /proc/`cat /var/run/sshd.pid`/oom_adj
 
 truncate --size 0 /var/log/kern.log
 
@@ -88,7 +95,7 @@ _mkfs()
 {
 	case $1 in
 	"f2fs")
-		mkfs.f2fs -f -O encrypt /dev/$DEV;;
+		mkfs.f2fs -f -O encrypt -O extra_attr -O quota -O inode_checksum /dev/$DEV;;
 	"ext4")
 		mkfs.ext4 -F /dev/$DEV;;
 	"xfs")
@@ -127,6 +134,11 @@ _debug_check()
 	done
 }
 
+_stop_fault()
+{
+	echo 0 > /sys/fs/f2fs/$DEV/inject_type
+}
+
 _fs_opts()
 {
 	echo 1000 > /sys/fs/f2fs/$DEV/gc_max_sleep_time
@@ -137,10 +149,11 @@ _fs_opts()
 	echo 5 > /sys/fs/f2fs/$DEV/idle_interval
 	echo 10 > /sys/fs/f2fs/$DEV/ram_thresh
 	echo 2024 > /sys/fs/f2fs/$DEV/reclaim_segments
+	echo 1 > /sys/fs/f2fs/$DEV/gc_urgent
 
 	rand=`shuf -i 3000-5000 -n 1`
 	echo $rand > /sys/fs/f2fs/$DEV/inject_rate
-	echo 255 > /sys/fs/f2fs/$DEV/inject_type
+	echo 0x2fff > /sys/fs/f2fs/$DEV/inject_type
 }
 
 _mount()
@@ -152,7 +165,7 @@ _mount()
 		mount -t f2fs -o discard /dev/$DEV $TESTDIR
 		#rand=`shuf -i 2000-4000 -n 1`
 		#mount -t f2fs /dev/$DEV -o background_gc=on,active_logs=6,discard,fault_injection=$rand $TESTDIR
-		#_fs_opts
+		_fs_opts
 		;;
 	*)
 		mount -t $1 -o discard /dev/$DEV $TESTDIR
@@ -160,12 +173,27 @@ _mount()
 	esac
 }
 
+_fsck_recovery()
+{
+	echo "QUOTA may be failed"
+	_fsck
+	echo "Mount for Recovery"
+	_mount f2fs
+	__umount
+	echo "QUOTA fix"
+	_fsck
+}
+
 _fsck()
 {
-	res=`fsck.f2fs /dev/$DEV | grep "Fail"`
+	rand=`shuf -i 3000-500000 -n 1`
+	fsck.f2fs -a -c $rand --debug-cache /dev/$DEV
+	res=`fsck.f2fs --dry-run /dev/$DEV | grep "Fail" | sed '/other corrupted/d'`
 	if [ "$res" ]; then
+		echo $res
 		exit
 	fi
+	fsck.f2fs -y -c $rand --debug-cache /dev/$DEV
 }
 
 _error()
@@ -200,12 +228,33 @@ _init_crypt()
 cur=0
 _rm_50()
 {
+	_stop_fault
 	for i in `seq 0 10`
 	do
 		idx=`printf '%x' $((($cur + $i)%20))`
 		rm -rf "$TESTDIR/test/p$idx" 2>/dev/null
 	done
 	cur=$(($cur + 1))
+	_fs_opts
+}
+
+__run_godown_fsstress()
+{
+	ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/test &
+	sleep 10
+	f2fs_io shutdown 2 $TESTDIR
+	killall fsstress
+	sleep 5
+}
+
+__iter_por_fsstress()
+{
+	__run_godown_fsstress
+	__umount
+	echo 3 > /proc/sys/vm/drop_caches
+	_fsck_recovery
+	_mount f2fs
+	_rm_50
 }
 
 por_fsstress()
@@ -213,21 +262,88 @@ por_fsstress()
 	_fs_opts
 
 	while true; do
-		ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/test &
-		sleep 10
-		src/godown $TESTDIR
-		killall fsstress
-		echo 3 > /proc/sys/vm/drop_caches
+		# w/ fault
+		__iter_por_fsstress
+
+		# w/o fault
+		_stop_fault
+		__iter_por_fsstress
+	done
+}
+
+__run_por_fsstress()
+{
+	echo "Run fsstress"
+	ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/test &
+	sleep 10
+	killall fsstress
+	sleep 10
+}
+
+__change_cp()
+{
+	echo "$1 CP Start"
+	_stop_fault
+	mount -t f2fs -o remount,discard,checkpoint=$1 /dev/$DEV $TESTDIR
+	tree $TESTDIR > /tmp/tree_before
+	_fs_opts
+}
+
+__check_prev_cp()
+{
+	_stop_fault
+	tree $TESTDIR > /tmp/tree_after
+	DIFF=`diff /tmp/tree_before /tmp/tree_after`
+	if [ "$DIFF" ]; then
+		echo $DIFF
+		exit
+	fi
+	_fs_opts
+}
+
+__umount()
+{
+	echo "Unmount"
+	umount $TESTDIR
+	if [ $? -ne 0 ]; then
+		for i in `seq 1 50`
+		do
+			umount $TESTDIR
+			if [ $? -eq 0 ]; then
+				break
+			fi
+			sleep 5
+		done
+	fi
+}
+
+disable_cp_fsstress()
+{
+	_fs_opts
+
+	while true; do
+		__run_por_fsstress
+		__change_cp "disable"
+		__run_por_fsstress
+		__umount
 		_fsck
-		sleep 1
-		umount $TESTDIR
-		echo 3 > /proc/sys/vm/drop_caches
-		_fsck
+
+		echo "Go back to the previous CP"
 		_mount f2fs
-		rm $TESTDIR/testfile
-		touch $TESTDIR/testfile
-		umount $TESTDIR
+		__check_prev_cp
+		_rm_50
+
+		_fs_opts
+		__run_por_fsstress
+		__change_cp "disable"
+		__run_por_fsstress
+		__change_cp "enable"
+		__run_por_fsstress
+		__umount
+		fsck.f2fs -f /dev/$DEV
 		_fsck
+
+		echo "Go forward next CP"
 		_mount f2fs
 		_rm_50
 	done
@@ -540,9 +656,7 @@ reload)
 		DEV=$2
 	fi
 	_reload f2fs
-	#mkfs.f2fs -O encrypt /dev/$DEV
-	#mkfs.f2fs -a 0 -s 20 /dev/$DEV
-	mkfs.f2fs -f -O encrypt /dev/$DEV
+	_mkfs f2fs
 	#_error
 	_mount f2fs
 	#_fs_opts
@@ -578,6 +692,9 @@ fsstress)
 	;;
 por_fsstress)
 	por_fsstress
+	;;
+disable_cp)
+	disable_cp_fsstress
 	;;
 test)
 	umount /mnt/*
