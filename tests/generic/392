@@ -95,12 +95,26 @@ test_punch()
 	check_inode_metadata $1
 }
 
+test_falloc()
+{
+	echo "==== falloc $2 test with $1 ====" | tee -a $seqres.full
+	$XFS_IO_PROG -f -c "truncate 4202496"	\
+			-c "pwrite 0 4202496"	\
+			-c "fsync"		\
+			-c "falloc -k 4202496 $2"\
+			$testfile >/dev/null
+	check_inode_metadata $1
+}
+
 for i in fsync fdatasync; do
 	test_i_size $i 1024
 	test_i_size $i 4096
 	test_i_time $i
 	test_punch $i 1024
 	test_punch $i 4096
+	test_falloc $i 1024
+	test_falloc $i 4096
+	test_falloc $i 104857600
 done
 
 exit
