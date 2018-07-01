@@ -54,7 +54,7 @@ alignment=`$here/src/min_dio_alignment $TEST_DIR $TEST_DEV`
 _require_fs_space $SCRATCH_MNT $((filesize / 1024 * 5 / 4))
 
 echo "Create the original files"
-$XFS_IO_PROG -f -c "falloc 0 $filesize" $testdir/file2 >> $seqres.full
+$XFS_IO_PROG -f -c "pwrite -S 0x0 0 $filesize" $testdir/file2 >> $seqres.full
 _dmerror_unmount
 _dmerror_mount
 
