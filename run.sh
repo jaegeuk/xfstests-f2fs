@@ -96,6 +96,8 @@ _mkfs()
 	case $1 in
 	"f2fs")
 		mkfs.f2fs -f -O encrypt -O extra_attr -O quota -O inode_checksum /dev/$DEV;;
+	"f2fs_comp")
+		mkfs.f2fs -f -O quota -C utf8 -O compression -O extra_attr /dev/$DEV;;
 	"ext4")
 		mkfs.ext4 -F /dev/$DEV;;
 	"xfs")
@@ -166,6 +168,9 @@ _mount()
 		#rand=`shuf -i 2000-4000 -n 1`
 		#mount -t f2fs /dev/$DEV -o background_gc=on,active_logs=6,discard,fault_injection=$rand $TESTDIR
 		_fs_opts
+		;;
+	"f2fs_comp")
+		mount -t f2fs -o discard,compress_extension=* /dev/$DEV $TESTDIR
 		;;
 	*)
 		mount -t $1 -o discard /dev/$DEV $TESTDIR
@@ -661,6 +666,17 @@ reload)
 	_mount f2fs
 	#_fs_opts
 #	echo foo | e4crypt add_key -S 0x12 $TESTDIR
+	;;
+reload_comp)
+	if [ $2 ]; then
+		DEV=$2
+	fi
+	_reload f2fs
+	_mkfs f2fs_comp
+	#_error
+	_mount f2fs_comp
+	#_fs_opts
+#	echo foo | f2fscrypt add_key -S 0x12 $TESTDIR
 	;;
 reload_ko)
 	_umount
