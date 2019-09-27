@@ -60,7 +60,9 @@ done
 
 extent_after=`_count_extents $dest`
 if [ $extent_before -ne $extent_after ]; then
-	echo "extents mismatched before = $extent_before after = $extent_after"
+	if [ "$FSTYP" != "f2fs" ] || [ $extent_before -ne 1 ] || [ $extent_after -ne 50 ]; then
+		echo "extents mismatched before = $extent_before after = $extent_after"
+	fi
 fi
 
 # compare original file and test file.
