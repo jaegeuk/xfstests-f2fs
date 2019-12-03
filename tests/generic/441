@@ -30,6 +30,8 @@ _cleanup()
 . ./common/filter
 . ./common/dmerror
 
+_notrun_f2fs "4.9" "Requires kernel fix for fsync error handler"
+
 # real QA test starts here
 _require_scratch
 # This test uses "dm" without taking into account the data could be on

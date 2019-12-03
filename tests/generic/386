@@ -50,6 +50,8 @@ proj_dir="$SCRATCH_MNT/test"
 # Modify as appropriate.
 _supported_fs generic
 
+_notrun_f2fs "4.9" "Requires Project Quota Ioctl"
+
 _require_quota
 _require_xfs_quota_foreign
 _require_scratch

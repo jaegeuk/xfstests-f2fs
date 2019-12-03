@@ -36,6 +36,8 @@ _require_scratch
 _require_quota
 _require_xfs_quota_foreign
 
+_notrun_f2fs "4.9" "Requires Project Quota Ioctl"
+
 _scratch_mkfs >/dev/null 2>&1
 _scratch_enable_pquota
 

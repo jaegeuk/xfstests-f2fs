@@ -35,6 +35,8 @@ _require_test_program "feature"
 _require_aiodio aio-dio-cycle-write
 _require_command "$TIMEOUT_PROG" timeout
 
+_notrun_f2fs "4.9" "Requires Kernel Fix: fs: Fix page cache inconsistency when mixing buffered and AIO DIO"
+
 TESTFILE=$TEST_DIR/tst-aio-dio-cycle-write.$seq
 FSIZE=655360	# bytes
 
