@@ -203,7 +203,8 @@ TEST_KEY_IDENTIFIER="69b2f6edeee720cce0577937eb8a6751"
 # the session keyring scoped to the lifetime of the test script.
 _new_session_keyring()
 {
-	$KEYCTL_PROG new_session >>$seqres.full
+	#$KEYCTL_PROG new_session >>$seqres.full
+	return
 }
 
 # Generate a key descriptor (16 character hex string)
