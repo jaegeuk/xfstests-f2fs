@@ -26,6 +26,11 @@ _require_test_program rewinddir-test
 [ $FSTYP == "btrfs" ] && _fixed_by_kernel_commit e60aa5da14d0 \
 	"btrfs: refresh dir last index during a rewinddir(3) call"
 
+f2fs_crypt=`echo $F2FS_MKFS_OPTIONS | grep encrypt`
+if [ "$f2fs_crypt" ]; then
+	_notrun "Requires no encrypted case"
+fi
+
 target_dir="$TEST_DIR/test-$seq"
 rm -fr $target_dir
 mkdir $target_dir
