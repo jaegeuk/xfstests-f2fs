@@ -28,6 +28,11 @@ _require_odirect
 _require_test
 _require_xfs_io_command pwrite -N
 
+f2fs_crypt=`echo $F2FS_MKFS_OPTIONS | grep encrypt`
+if [ "$f2fs_crypt" ]; then
+	_notrun "Requires no encrypted case"
+fi
+
 # Remove reminiscence of previously run tests
 testdir=$TEST_DIR/$seq
 if [ -e $testdir ]; then
