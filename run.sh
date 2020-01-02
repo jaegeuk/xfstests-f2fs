@@ -5,14 +5,14 @@
 #VER=f2fs-4.1
 #VER=f2fs-4.4
 VER=f2fs
-DEV=nvme0n1
+DEV=vdb
 #DEV=sdb1
 #DEV=sdc
-MAIN=nvme0n1p1
-MAINDEV=sdb2
+MAIN=vdc
+MAINDEV=vdd
 
-LOG_TARGET=nvme0n1p1
-LOG_DEV=nvme1n1p2
+LOG_TARGET=vdd
+LOG_DEV=vde
 
 TESTDIR=/mnt/test
 PH_STORAGE=/var/lib/phoronix-test-suite
