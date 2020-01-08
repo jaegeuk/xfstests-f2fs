@@ -33,6 +33,10 @@ _require_scratch_nocheck
 _require_log_writes
 _require_dm_target thin-pool
 
+_notrun_f2fs "4.9" "Requires logwriter fix"
+_notrun_f2fs "4.14" "Requires logwriter fix"
+_notrun_f2fs "4.19" "Requires logwriter fix"
+
 rm -f $seqres.full
 
 check_files()
