@@ -41,6 +41,10 @@ _supported_fs generic
 _require_user
 _require_scratch_encryption -v 2
 
+_notrun_f2fs "4.9" "Requires crypto fix"
+_notrun_f2fs "4.14" "Requires crypto fix"
+_notrun_f2fs "4.19" "Requires crypto fix"
+
 _scratch_mkfs_encrypted &>> $seqres.full
 _scratch_mount
 
