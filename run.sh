@@ -697,6 +697,7 @@ xfstests)
 #	mkfs.f2fs /dev/ram1
 #	cp local.config.ram local.config
 #	_check
+	echo "Should turn CONFIG_KEYS_REQUEST_CACHE off!"
 	cp local.config.noenc local.config
 	_check "clone,dedupe,thin"
 	cp local.config.enc local.config
