@@ -22,6 +22,11 @@ _require_symlinks
 _require_check_dmesg
 _require_attrs
 
+f2fs_crypt=`echo $F2FS_MKFS_OPTIONS | grep encrypt`
+if [ "$f2fs_crypt" ]; then
+	_notrun "Requires casefolding doesn't support encrypted partition"
+fi
+
 sdev=$(_short_dev ${SCRATCH_DEV})
 
 filename1="file.txt"
