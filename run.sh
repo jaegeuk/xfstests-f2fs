@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #VER=f2fs-3.18
 #VER=f2fs-3.10
@@ -218,6 +218,22 @@ _init()
 	#_fs_opts
 }
 
+__set_crypt()
+{
+	kernel=`uname -r`
+	version=`echo ${kernel%.*}`
+	if [ "$version" == "4.14" ] || [ "$version" == "4.19" ]; then
+		return
+	fi
+	fscrypt setup --force
+	fscrypt setup $1
+	mkdir $2
+	fscrypt encrypt $2 --source=custom_passphrase --user=root --name="Super Secret" << EOF
+password
+password
+EOF
+}
+
 _init_crypt()
 {
 	_umount
@@ -225,8 +241,7 @@ _init_crypt()
 	mkfs.f2fs -f -O encrypt /dev/$DEV
 	_error
 	_mount f2fs
-	mkdir $TESTDIR/test
-	echo foo | e4crypt add_key -S 0x12 $TESTDIR/test
+	__set_crypt $TESTDIR $TESTDIR/test
 	_fs_opts
 }
 
@@ -245,7 +260,18 @@ _rm_50()
 
 __run_godown_fsstress()
 {
+	kernel=`uname -r`
+	version=`echo ${kernel%.*}`
+	if [ "$version" != "4.14" ] && [ "$version" != "4.19" ]; then
+		fscrypt unlock --user=root $TESTDIR/crypt_test << EOF
+password
+EOF
+	fi
+
 	ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/test &
+	if [ "$version" != "4.14" ] && [ "$version" != "4.19" ]; then
+		ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/crypt_test &
+	fi
 	sleep 10
 	f2fs_io shutdown 2 $TESTDIR
 	killall fsstress
@@ -665,7 +691,7 @@ reload)
 	#_error
 	_mount f2fs
 	#_fs_opts
-#	echo foo | e4crypt add_key -S 0x12 $TESTDIR
+	__set_crypt $TESTDIR $TESTDIR/crypt_test
 	;;
 reload_comp)
 	if [ $2 ]; then
@@ -700,8 +726,8 @@ xfstests)
 	echo "Should turn CONFIG_KEYS_REQUEST_CACHE off!"
 	cp local.config.noenc local.config
 	_check "clone,dedupe,thin"
-	cp local.config.enc local.config
-	_check "clone,dedupe,thin,encrypt"
+#	cp local.config.enc local.config
+#	_check "clone,dedupe,thin,encrypt"
 	;;
 fsstress)
 	_init f2fs
@@ -718,7 +744,7 @@ test)
 	mkfs.f2fs -f -O encrypt /dev/$DEV
 	_mount f2fs
 	mkdir $TESTDIR/test
-	echo foo | e4crypt add_key -S 0x12 $TESTDIR
+	__set_crypt $TESTDIR $TESTDIR/test
 	_fs_opts
 	ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches && sleep 1" -X 10 -r -f fsync=3 -f write=8 -f dwrite=10 -f truncate=8 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=0 -f collapse=0 -f insert=0 -f resvsp=0 -f unresvsp=0 -S t -p 10 -n 10000 -d $TESTDIR/test
 	umount $TESTDIR
