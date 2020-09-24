@@ -180,11 +180,14 @@ _mount()
 
 _fsck_recovery()
 {
+	date
 	echo "QUOTA may be failed"
 	_fsck
+	date
 	echo "Mount for Recovery"
 	_mount f2fs
 	__umount
+	date
 	echo "QUOTA fix"
 	_fsck
 }
