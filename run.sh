@@ -722,6 +722,13 @@ reload_mul)
 	mount -t f2fs -o discard /dev/$MAIN $TESTDIR
 	;;
 xfstests)
+	kernel=`uname -r`
+	version=`echo ${kernel%.*}`
+
+	if [ "$version" == "4.14" ] || [ "$version" == "4.19" ]; then
+		cp tests/generic/611.out.old tests/generic/611.out
+	fi
+
 #	mkfs.f2fs /dev/ram0
 #	mkfs.f2fs /dev/ram1
 #	cp local.config.ram local.config
