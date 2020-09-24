@@ -43,7 +43,7 @@ contents
 # Key should be in "incompletely removed" state
 Incompletely removed
 # Closing file and removing key for real now
-Removed encryption key with descriptor 0000111122223333
+Removed encryption key with descriptor 0000111122223333, but files still busy
 cat: SCRATCH_MNT/dir/file: No such file or directory
 # Cleaning up
 
@@ -83,7 +83,7 @@ contents
 # Key should be in "incompletely removed" state
 Incompletely removed
 # Closing file and removing key for real now
-Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
+Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751, but files still busy
 cat: SCRATCH_MNT/dir/file: No such file or directory
 # Cleaning up
 
