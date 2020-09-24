@@ -35,6 +35,8 @@ _cleanup()
 . ./common/filter
 . ./common/dmerror
 
+_notrun_f2fs "4.14" "Require fs/buffer patches to report IO error in syncfs"
+
 # real QA test starts here
 _require_scratch_nocheck
 # This test uses "dm" without taking into account the data could be on
