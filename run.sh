@@ -158,6 +158,17 @@ _fs_opts()
 	echo 0x2fff > /sys/fs/f2fs/$DEV/inject_type
 }
 
+__unlock_crypt()
+{
+	kernel=`uname -r`
+	version=`echo ${kernel%.*}`
+	if [ "$version" != "4.14" ] && [ "$version" != "4.19" ]; then
+		fscrypt unlock --user=root $TESTDIR/crypt_test << EOF
+password
+EOF
+	fi
+}
+
 _mount()
 {
 	case $1 in
@@ -176,6 +187,7 @@ _mount()
 		mount -t $1 -o discard /dev/$DEV $TESTDIR
 		;;
 	esac
+	__unlock_crypt
 }
 
 _fsck_recovery()
@@ -256,6 +268,7 @@ _rm_50()
 	do
 		idx=`printf '%x' $((($cur + $i)%20))`
 		rm -rf "$TESTDIR/test/p$idx" 2>/dev/null
+		rm -rf "$TESTDIR/crypt_test/p$idx" 2>/dev/null
 	done
 	cur=$(($cur + 1))
 	_fs_opts
@@ -263,14 +276,6 @@ _rm_50()
 
 __run_godown_fsstress()
 {
-	kernel=`uname -r`
-	version=`echo ${kernel%.*}`
-	if [ "$version" != "4.14" ] && [ "$version" != "4.19" ]; then
-		fscrypt unlock --user=root $TESTDIR/crypt_test << EOF
-password
-EOF
-	fi
-
 	ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/test &
 	if [ "$version" != "4.14" ] && [ "$version" != "4.19" ]; then
 		ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/crypt_test &
