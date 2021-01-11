@@ -95,7 +95,7 @@ _mkfs()
 {
 	case $1 in
 	"f2fs")
-		mkfs.f2fs -f -O encrypt -O extra_attr -O quota -O inode_checksum /dev/$DEV;;
+		mkfs.f2fs -f -O encrypt -O extra_attr -O quota -O compression /dev/$DEV;;
 	"f2fs_comp")
 		mkfs.f2fs -f -O quota -C utf8 -O compression -O extra_attr /dev/$DEV;;
 	"ext4")
@@ -175,7 +175,7 @@ _mount()
 	"f2fs")
 		#mount -t f2fs /dev/$DEV -o no_heap,background_gc=off,active_logs=2,discard $TESTDIR
 		#mount -t f2fs /dev/$DEV -o background_gc=sync,active_logs=6,discard $TESTDIR
-		mount -t f2fs -o discard /dev/$DEV $TESTDIR
+		mount -t f2fs -o discard,fsync_mode=nobarrier,reserve_root=32768,checkpoint_merge,compress_extension=*,atgc /dev/$DEV $TESTDIR
 		#rand=`shuf -i 2000-4000 -n 1`
 		#mount -t f2fs /dev/$DEV -o background_gc=on,active_logs=6,discard,fault_injection=$rand $TESTDIR
 		_fs_opts
