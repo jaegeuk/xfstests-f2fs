@@ -264,9 +264,9 @@ cur=0
 _rm_50()
 {
 	_stop_fault
-	for i in `seq 0 10`
+	for i in `seq 0 5`
 	do
-		idx=`printf '%x' $((($cur + $i)%20))`
+		idx=`printf '%x' $((($cur + $i)%32))`
 		rm -rf "$TESTDIR/test/p$idx" 2>/dev/null
 		rm -rf "$TESTDIR/crypt_test/p$idx" 2>/dev/null
 	done
@@ -278,9 +278,9 @@ __run_godown_fsstress()
 {
 	ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/test &
 	if [ "$version" != "4.14" ] && [ "$version" != "4.19" ]; then
-		ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 20 -n 200000 -d $TESTDIR/crypt_test &
+		ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 32 -n 200000 -d $TESTDIR/crypt_test &
 	fi
-	sleep 10
+	sleep 240
 	f2fs_io shutdown 2 $TESTDIR
 	killall fsstress
 	sleep 5
