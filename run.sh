@@ -155,7 +155,7 @@ _fs_opts()
 
 	rand=`shuf -i 3000-5000 -n 1`
 	echo $rand > /sys/fs/f2fs/$DEV/inject_rate
-	echo 0x2fff > /sys/fs/f2fs/$DEV/inject_type
+	echo 0x17ff > /sys/fs/f2fs/$DEV/inject_type
 }
 
 __unlock_crypt()
@@ -178,6 +178,10 @@ _mount()
 		mount -t f2fs -o discard,fsync_mode=nobarrier,reserve_root=32768,checkpoint_merge,compress_extension=*,atgc /dev/$DEV $TESTDIR
 		#rand=`shuf -i 2000-4000 -n 1`
 		#mount -t f2fs /dev/$DEV -o background_gc=on,active_logs=6,discard,fault_injection=$rand $TESTDIR
+		f2fs=`mount | grep $TESTDIR | grep f2fs`
+		if [ ! "$f2fs" ]; then
+			exit
+		fi
 		_fs_opts
 		;;
 	"f2fs_comp")
@@ -264,7 +268,7 @@ cur=0
 _rm_50()
 {
 	_stop_fault
-	for i in `seq 0 5`
+	for i in `seq 0 16`
 	do
 		idx=`printf '%x' $((($cur + $i)%32))`
 		rm -rf "$TESTDIR/test/p$idx" 2>/dev/null
@@ -281,7 +285,13 @@ __run_godown_fsstress()
 		ltp/fsstress -x "echo 3 > /proc/sys/vm/drop_caches" -X 10 -r -f fsync=8 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f allocsp=0 -f bulkstat=0 -f bulkstat1=0 -f freesp=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 32 -n 200000 -d $TESTDIR/crypt_test &
 	fi
 	sleep 240
-	f2fs_io shutdown 2 $TESTDIR
+	f2fs=`mount | grep $TESTDIR | grep f2fs`
+	if [ "$f2fs" ]; then
+		f2fs_io shutdown 2 $TESTDIR
+	else
+		killall fsstress
+		exit
+	fi
 	killall fsstress
 	sleep 5
 }
