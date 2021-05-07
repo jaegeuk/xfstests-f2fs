@@ -155,7 +155,7 @@ _fs_opts()
 
 	rand=`shuf -i 3000-5000 -n 1`
 	echo $rand > /sys/fs/f2fs/$DEV/inject_rate
-	echo 0x17ff > /sys/fs/f2fs/$DEV/inject_type
+	echo 0x13ff > /sys/fs/f2fs/$DEV/inject_type
 }
 
 __unlock_crypt()
