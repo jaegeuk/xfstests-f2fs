@@ -46,6 +46,8 @@ elif [ "$FSTYP" = "btrfs" ]; then
 	# So for this test case, btrfs will not get any dirty log tree thus
 	# it can be treated as "nojournal".
 	features="nojournal"
+elif [ "$FSTYP" = "f2fs" ] ; then
+	features="nojournal"
 fi
 _link_out_file "$features"
 
