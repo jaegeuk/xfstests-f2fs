@@ -42,6 +42,8 @@ elif [ "$FSTYP" = "xfs" ] && echo "$MOUNT_OPTIONS" | grep -q quota ; then
 	# Mounting with quota on XFS requires a writable fs, which means
 	# we expect to fail the ro blockdev test with with EPERM.
 	features="xfsquota"
+elif [ "$FSTYP" = "f2fs" ] ; then
+	features="nojournal"
 fi
 _link_out_file "$features"
 
