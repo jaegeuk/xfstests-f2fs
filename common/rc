@@ -1048,6 +1048,18 @@ _scratch_mkfs()
 	return $?
 }
 
+_scratch_mkfs_projquota()
+{
+	case $FSTYP in
+	f2fs)
+		_scratch_mkfs -O extra_attr,project_quota $*
+		;;
+	*)
+		_scratch_mkfs
+		;;
+	esac
+}
+
 # Helper function to get a spare or replace-target device from
 # configured SCRATCH_DEV_POLL, must call _scratch_dev_pool_get()
 # before _spare_dev_get(). Replace-target-device/Spare-device will
