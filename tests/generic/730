@@ -48,6 +48,9 @@ exec 3< $SCSI_DEBUG_MNT/testfile
 # delete the scsi debug device while it still has dirty data
 echo 1 > /sys/block/$(_short_dev $SCSI_DEBUG_DEV)/device/delete
 
+# drop cache
+echo 3 > /proc/sys/vm/drop_caches
+
 # try to read from the file, which should give us -EIO
 cat <&3 > /dev/null
 
