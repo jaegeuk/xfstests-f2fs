@@ -315,6 +315,19 @@ _scratch_unmount()
 	btrfs)
 		$UMOUNT_PROG $SCRATCH_MNT
 		;;
+	f2fs)
+		MOUNTED=`cat /proc/mounts | grep $SCRATCH_MNT`
+		local i
+		if [ "$MOUNTED" ]; then
+			for i in `seq 1 10`
+			do
+				if $UMOUNT_PROG $SCRATCH_MNT 2>/dev/null; then
+					return
+				fi
+				sleep 1
+			done
+		fi
+		;;
 	*)
 		$UMOUNT_PROG $SCRATCH_DEV
 		;;
