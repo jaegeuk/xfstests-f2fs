@@ -35,6 +35,8 @@ _require_scratch_nocheck
 _require_cgroup2 io
 _require_loop
 
+_notrun "Let's skip cgroup test in F2FS"
+
 # cgroup v2 writeback is only support on block devices so far
 _require_block_device $SCRATCH_DEV
 
