@@ -26,7 +26,7 @@ for i in $(seq 0 500); do
 done
 # For overlayfs, avoid unmouting the base fs after _scratch_mount
 # tries to mount the base fs
-$UMOUNT_PROG $SCRATCH_MNT &
+_scratch_unmount
 _scratch_mount
 wait
 
