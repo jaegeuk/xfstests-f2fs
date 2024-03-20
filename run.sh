@@ -215,7 +215,11 @@ _check()
 {
 	umount /mnt/*
 #	t="$t tests/generic/126"
-	./check -x $1 $t
+	if test -f ".xfstests.exclude"; then
+		./check -x $1 -E .xfstests.exclude $t
+	else
+		./check -x $1 $t
+	fi
 }
 
 case "$1" in
