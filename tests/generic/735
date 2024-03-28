@@ -19,6 +19,8 @@ if [[ "$FSTYP" =~ ext[0-9]+ ]]; then
 	_fixed_by_kernel_commit 2dcf5fde6dff "ext4: prevent the normalized size from exceeding EXT_MAX_BLOCKS"
 fi
 
+_notrun "0xffffffff doesn't support in f2fs"
+
 _require_odirect
 _require_xfs_io_command "falloc"
 _require_xfs_io_command "finsert"
