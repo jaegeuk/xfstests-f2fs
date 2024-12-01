@@ -37,6 +37,7 @@ dbfile=$SCRATCH_MNT/dbfile
 
 # start atomic_write on dbfile & write data to dbfile
 touch $dbfile
+$F2FS_IO_PROG write 1 0 32 zero atomic_commit $dbfile >> $seqres.full
 $F2FS_IO_PROG write 1 0 32 zero atomic_commit $dbfile 3000 >> $seqres.full &
 atomic_write_pid=$!
 
