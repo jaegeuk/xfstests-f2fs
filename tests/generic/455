@@ -83,6 +83,8 @@ for j in `seq 0 $((NUM_FILES-1))`; do
 done
 wait
 
+sleep 1
+
 test_md5=()
 for j in `seq 0 $((NUM_FILES-1))`; do
 	test_md5[$j]=$(_md5_checksum $SCRATCH_MNT/testfile$j)
