@@ -116,6 +116,7 @@ _fs_opts()
 	echo 10 > /sys/fs/f2fs/$DEV/ram_thresh
 	echo 2024 > /sys/fs/f2fs/$DEV/reclaim_segments
 	echo 1 > /sys/fs/f2fs/$DEV/gc_urgent
+	echo 0 > /sys/fs/f2fs/$DEV/atgc_age_threshold
 
 	rand=`shuf -i 3000-5000 -n 1`
 	echo $rand > /sys/fs/f2fs/$DEV/inject_rate
