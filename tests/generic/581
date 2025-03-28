@@ -75,6 +75,7 @@ echo "# Creating encrypted file as regular user (should succeed)"
 _user_do "echo contents > $dir/file"
 
 echo "# Removing v2 policy key as regular user (should succeed)"
+sleep 1
 _user_do_rm_enckey $SCRATCH_MNT $keyid
 
 _scratch_cycle_mount	# Clear all keys
