@@ -44,6 +44,9 @@ EOF
 
 _mount()
 {
+	date
+	echo "==== mount $1 ====="
+
 	case $1 in
 	"f2fs")
 		mount -t f2fs -o discard,fsync_mode=nobarrier,reserve_root=32768,checkpoint_merge,atgc,compress_cache /dev/$DEV $TESTDIR
@@ -55,6 +58,12 @@ _mount()
 		;;
 	"f2fs_comp")
 		mount -t f2fs -o discard,compress_extension=* /dev/$DEV $TESTDIR
+		;;
+	"f2fs_disable")
+		mount -t f2fs -o discard,checkpoint=disable:100% /dev/$DEV $TESTDIR
+		;;
+	"f2fs_enable")
+		mount -t f2fs -o remount,checkpoint=enable /dev/$DEV $TESTDIR
 		;;
 	*)
 		mount -t $1 -o discard /dev/$DEV $TESTDIR
@@ -145,12 +154,11 @@ _rm_50()
 	_fs_opts
 }
 
-__run_godown_fsstress()
+__run_fsstress()
 {
-	mkdir $TESTDIR/comp
-	f2fs_io setflags compression $TESTDIR/comp
 	ltp/fsstress -r -f drop=3 -f fsync=0 -f fdatasync=0 -f sync=0 -f write=4 -f dwrite=2 -f truncate=6 -f bulkstat=0 -f bulkstat1=0 -f zero=1 -f collapse=1 -f insert=1 -f resvsp=0 -f unresvsp=0 -S t -p 16 -n 200000 -d $TESTDIR/comp &
 	ltp/fsstress -r -z -f drop=3 -f fsync=1 -f fdatasync=1 -f write=4 -f dwrite=0 -f truncate=1 -S t -p 16 -n 200000 -d $TESTDIR/normal &
+
 	if [ "$version" != "4.14" ] && [ "$version" != "4.19" ]; then
 		# dir
 		ltp/fsstress -r -f drop=3 -f fsync=0 -f sync=0 -f write=0  -f read=0 -f dwrite=0 -f dread=0 -f bulkstat=0 -f bulkstat1=0 -f resvsp=0 -f unresvsp=0 -S t -p 16 -n 200000 -d $TESTDIR/crypt_test &
@@ -159,7 +167,16 @@ __run_godown_fsstress()
 		# whole
 		ltp/fsstress -r -S t -p 16 -n 200000 -d $TESTDIR/crypt_test &
 	fi
-	sleep 240
+
+	sleep $1
+}
+
+__run_godown_fsstress()
+{
+	mkdir $TESTDIR/comp >/dev/null
+	f2fs_io setflags compression $TESTDIR/comp >/dev/null
+	echo "Run fsstress with sleep $1"
+	__run_fsstress $1 >/dev/null
 	f2fs=`mount | grep $TESTDIR | grep f2fs`
 	if [ "$f2fs" ]; then
 		f2fs_io shutdown 2 $TESTDIR
@@ -175,12 +192,17 @@ __run_godown_fsstress()
 
 __iter_por_fsstress()
 {
-	__run_godown_fsstress
+	__run_godown_fsstress 240
 	_umount
 	echo 3 > /proc/sys/vm/drop_caches
 	_fsck_recovery
 	_mount f2fs
 	_rm_50
+	_umount
+	_mount f2fs_disable
+	echo "Run fsstress with sleep 30"
+	__run_fsstress 30 >/dev/null
+	_mount f2fs_enable
 }
 
 por_fsstress()
